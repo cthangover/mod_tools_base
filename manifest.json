@@ -1,0 +1,26 @@
+{
+  "id": "tools_base",
+  "name": "Tool Authoring Base",
+  "version": "1.0.0",
+  "author": "ct",
+  "description": "Shared forms, file access, localization editing and UI components for authoring tools. No tool windows.",
+  "category": "engine, library",
+  "sources": [
+    "src/**/*.cs"
+  ],
+  "depends": [
+    "ui_base>=1",
+    "schema_base>=1"
+  ],
+  "test_sources": [
+    "tests/*.cs"
+  ],
+  "test_suites": [
+    {
+      "id": "isolation",
+      "activate": [
+        "--itest=tools_isolation"
+      ]
+    }
+  ]
+}

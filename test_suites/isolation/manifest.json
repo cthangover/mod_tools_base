@@ -1,0 +1,6 @@
+{
+  "name": "Tool isolation checks",
+  "description": "Checks the exact window registry and forbidden mods for a minimal tool selection, opens and closes every window, and verifies that insertion targets are released.",
+  "sources": ["src/*.cs"],
+  "depends": []
+}
