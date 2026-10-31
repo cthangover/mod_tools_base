@@ -102,6 +102,110 @@ namespace Cthangover.Tools.EntityEditor.Tests
             ModAssert.Equal(0, document.ChangedFiles().Count + document.ChangedTexts().Count, "nothing left after saving");
         }
 
+        private const string Patch = "{\n  \"Items\": [\n    {\n      \"Id\": \"other/sword\",\n      \"Cost\": 40\n    }\n  ]\n}\n";
+
+        /// <summary>Base values of other mods' entities, as the game would resolve them without the edited mod's patch.</summary>
+        private static JsonObject BaseOf(string id) => id switch
+        {
+            "other/sword" => new JsonObject { ["Id"] = "other/sword", ["Cost"] = 30, ["Traits"] = new JsonArray("sharp") },
+            "other/shield" => new JsonObject { ["Id"] = "other/shield", ["Cost"] = 12 },
+            _ => null
+        };
+
+        private static EntityDocument WithForeign(string patchText)
+        {
+            var document = Load(out _);
+            document.AttachForeign("patches/item/my_mod.json", patchText, null, new[]
+            {
+                ("other/sword", "other", "items/other.json", new JsonObject { ["Id"] = "other/sword", ["Cost"] = 30 }),
+                ("other/shield", "other", "items/other.json", new JsonObject { ["Id"] = "other/shield" }),
+                ("food/bread", "other", "items/other.json", new JsonObject { ["Id"] = "food/bread" })
+            }, BaseOf);
+            return document;
+        }
+
+        [ModTest("entity_document/foreign_listed_with_own_patch")]
+        static void ForeignListedWithOwnPatch(ModTestContext ctx)
+        {
+            var document = WithForeign(Patch);
+            ModAssert.Equal(2, document.Foreign.Count, "an id the mod defines itself is not foreign");
+            ModAssert.Equal(1, document.Records.Count, "own records are unchanged");
+            var sword = document.FindForeign("OTHER/SWORD");
+            ModAssert.True(sword.IsForeign, "foreign");
+            ModAssert.Equal("other", sword.OwnerMod, "its owner");
+            ModAssert.Equal("40", sword.Data["Cost"].ToString(), "the form sees the value with the own patch");
+            ModAssert.Equal("30", document.BaseOf(sword)["Cost"].ToString(), "the base is without it");
+            ModAssert.Null(document.ChangedPatch(), "nothing to write after loading");
+            ModAssert.True(document.FindAny("food/bread") == document.Find("food/bread"), "an own entity wins the lookup");
+        }
+
+        [ModTest("entity_document/foreign_edit_writes_minimal_patch")]
+        static void ForeignEditWritesMinimalPatch(ModTestContext ctx)
+        {
+            var document = WithForeign(null);
+            var shield = document.FindForeign("other/shield");
+            document.BeginChange();
+            shield.Data["Cost"] = 15;
+            document.CommitForeign(shield);
+
+            var patch = document.ChangedPatch();
+            ModAssert.NotNull(patch, "the patch file changes");
+            ModAssert.Equal("patches/item/my_mod.json", patch.Value.Path, "in the edited mod's patch file");
+            var entry = JsonNode.Parse(patch.Value.Text)["Items"][0].AsObject();
+            ModAssert.Equal("other/shield", entry["Id"].ToString(), "addressed to the entity");
+            ModAssert.Equal(2, entry.Count, "only the id and the changed field");
+            ModAssert.Equal("15", entry["Cost"].ToString(), "the edit");
+            ModAssert.True(patch.Value.Text.EndsWith("}\n") && !patch.Value.Text.Contains("\r"), "LF text");
+            ModAssert.Equal(0, document.ChangedFiles().Count, "no own data file is touched");
+
+            shield.Data["Cost"] = 12;
+            document.CommitForeign(shield);
+            ModAssert.Null(document.PatchOf("other/shield"), "back to the base value: no entry");
+            ModAssert.Null(document.ChangedPatch(), "and nothing to write (there was no file)");
+        }
+
+        [ModTest("entity_document/foreign_reset_and_delete")]
+        static void ForeignResetAndDelete(ModTestContext ctx)
+        {
+            var document = WithForeign(Patch);
+            var sword = document.FindForeign("other/sword");
+
+            document.BeginChange();
+            sword.Data["Traits"] = new JsonArray("sharp", "holy");
+            document.CommitForeign(sword);
+            ModAssert.NotNull(document.PatchOf("other/sword")["Cost"], "the earlier patched field stays");
+            ModAssert.Equal("holy", document.PatchOf("other/sword")["Traits$add"][0].ToString(), "a grown list is an $add");
+
+            document.ResetField(sword, "Cost");
+            ModAssert.Equal("30", sword.Data["Cost"].ToString(), "reset shows the inherited value");
+            ModAssert.Null(document.PatchOf("other/sword")["Cost"], "and removes the key from the patch");
+
+            document.BeginChange();
+            document.DeleteForeign(sword);
+            ModAssert.True(document.IsDeleted(sword), "deleting a foreign entity is a patch");
+            ModAssert.Equal("true", document.PatchOf("other/sword")["$delete"].ToString(), "with $delete");
+            ModAssert.Equal(2, document.Foreign.Count, "the entity stays listed");
+
+            ModAssert.True(document.Undo(), "undo the delete");
+            ModAssert.False(document.IsDeleted(sword), "not deleted");
+            ModAssert.Equal("holy", sword.Data["Traits"][1].ToString(), "the edit is back in the form's data");
+
+            document.ResetForeign(sword);
+            ModAssert.Null(document.PatchOf("other/sword"), "reset removes the entry");
+            var patch = document.ChangedPatch();
+            ModAssert.NotNull(patch, "the patch file changed");
+            ModAssert.Null(patch.Value.Text, "its last entry is gone: the file is to be removed");
+            document.MarkSaved();
+            ModAssert.Null(document.ChangedPatch(), "nothing left after saving");
+        }
+
+        [ModTest("entity_document/free_id_counts_foreign")]
+        static void FreeIdCountsForeign(ModTestContext ctx)
+        {
+            var document = WithForeign(null);
+            ModAssert.Equal("other/sword_2", document.FreeId("other/sword"), "a foreign id is taken too");
+        }
+
         [ModTest("entity_document/validate_reports_ids")]
         static void ValidateReportsIds(ModTestContext ctx)
         {

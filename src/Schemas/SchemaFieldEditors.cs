@@ -24,6 +24,8 @@ namespace Cthangover.Tools.Schemas
                     return new ListFieldEditor(parent, field, changed);
                 case "map":
                     return new MapFieldEditor(parent, field, changed);
+                case "stages":
+                    return new StageFieldEditor(parent, field, changed);
                 case "locale":
                     return new LocaleFieldEditor(parent, field, changed);
                 default:

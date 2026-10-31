@@ -6,6 +6,7 @@ namespace Cthangover.Tools.Schemas
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using Cthangover.Core.UI.Theming;
     using Cthangover.Mods.Interface.Theming;
     using Cthangover.Tools.Common;
     using Cthangover.Tools.EntityEditor;
@@ -34,6 +35,7 @@ namespace Cthangover.Tools.Schemas
         private readonly CodeEdit json;
         private readonly OptionButton picker;
         private readonly CheckBox check;
+        private readonly CheckBox selfScope;
         private readonly List<string> pickerValues = new();
         private bool suppress;
 
@@ -52,6 +54,7 @@ namespace Cthangover.Tools.Schemas
                     Editor = ToolUi.Field(parent, label, check, tip);
                     break;
                 case "choice":
+                case "pick":
                 case "ref":
                 case "who":
                     picker = new OptionButton { Name = "Picker_" + field.Key };
@@ -61,7 +64,8 @@ namespace Cthangover.Tools.Schemas
                 case "ref_list":
                 case "picture":
                     var row = new HBoxContainer();
-                    text = ToolUi.Text(field.Default ?? string.Empty, OnTyped);
+                    text = ToolUi.Text(string.Empty, OnTyped);
+                    text.Text = field.Default ?? string.Empty;
                     text.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
                     row.AddChild(text);
                     if (Type == "picture")
@@ -78,6 +82,21 @@ namespace Cthangover.Tools.Schemas
                     }
                     Editor = ToolUi.Field(parent, label, row, tip);
                     break;
+                case "flag":
+                    // A story flag, or the flag of the object the dialog runs for (<c>self.</c>, see DialogQueue.Scope).
+                    var flagRow = new HBoxContainer();
+                    flagRow.AddThemeConstantOverride("separation", UiTokens.Space2);
+                    selfScope = new CheckBox { Text = ToolUi.Tr("tools/schema/flag_self"), TooltipText = ToolUi.Tr("tools/schema/flag_self_tip") };
+                    selfScope.Toggled += OnTogglerChanged;
+                    flagRow.AddChild(selfScope);
+                    text = ToolUi.Text(ToolUi.Tr("tools/schema/flag_placeholder"), OnTyped);
+                    text.Name = "Text_" + field.Key;
+                    text.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+                    // ToolUi.Text takes a placeholder, so the schema's default is put in the text itself.
+                    text.Text = field.Default ?? string.Empty;
+                    flagRow.AddChild(text);
+                    Editor = ToolUi.Field(parent, label, flagRow, tip);
+                    break;
                 case "json":
                     json = ToolUi.Code();
                     json.Name = "Text_" + field.Key;
@@ -88,7 +107,8 @@ namespace Cthangover.Tools.Schemas
                     Editor = ToolUi.Field(parent, label, json, tip);
                     break;
                 default:
-                    text = ToolUi.Text(field.Default ?? string.Empty, OnTyped);
+                    text = ToolUi.Text(string.Empty, OnTyped);
+                    text.Text = field.Default ?? string.Empty;
                     text.Name = "Text_" + field.Key;
                     if (Type is "formula" or "condition")
                         text.AddThemeFontOverride("font", ToolUi.Mono());
@@ -114,6 +134,8 @@ namespace Cthangover.Tools.Schemas
             {
                 if (check != null)
                     return check.ButtonPressed ? "1" : string.Empty;
+                if (selfScope != null)
+                    return (selfScope.ButtonPressed ? "self." : string.Empty) + text.Text.Trim();
                 if (text != null)
                     return text.Text.Trim();
                 if (json != null)
@@ -125,6 +147,12 @@ namespace Cthangover.Tools.Schemas
                 suppress = true;
                 if (check != null)
                     check.ButtonPressed = value is "1" or "true" or "True" or "yes";
+                else if (selfScope != null)
+                {
+                    var value2 = value ?? string.Empty;
+                    selfScope.ButtonPressed = value2.StartsWith("self.", StringComparison.Ordinal);
+                    text.Text = selfScope.ButtonPressed ? value2.Substring("self.".Length) : value2;
+                }
                 else if (text != null)
                     text.Text = value ?? string.Empty;
                 else if (json != null)
@@ -146,7 +174,7 @@ namespace Cthangover.Tools.Schemas
             if (!appendOnly && !string.IsNullOrEmpty(current) && !Options().Contains(current, StringComparer.OrdinalIgnoreCase))
                 Add(current, current);
             foreach (var option in Options())
-                Add(option, Type == "choice" ? option : GameEntityIndex.Label(KindOfOptions, option));
+                Add(option, Type is "choice" or "pick" ? option : GameEntityIndex.Label(KindOfOptions, option));
             var index = appendOnly ? 0 : Math.Max(0, pickerValues.FindIndex(v => string.Equals(v, current, StringComparison.OrdinalIgnoreCase)));
             picker.Select(index);
         }
@@ -165,6 +193,8 @@ namespace Cthangover.Tools.Schemas
             {
                 case "choice":
                     return Field.Options ?? new List<string>();
+                case "pick":
+                    return GameEntityIndex.ValuesOf(Field.Kind, Field.From);
                 case "who":
                     return new[] { "player", "party" }.Concat(GameEntityIndex.Of("character").Keys);
                 default:
@@ -173,6 +203,12 @@ namespace Cthangover.Tools.Schemas
         }
 
         private void OnJsonChanged() => OnTyped(json.Text);
+
+        private void OnTogglerChanged(bool on)
+        {
+            if (!suppress)
+                changed?.Invoke();
+        }
 
         private void OnTyped(string value)
         {

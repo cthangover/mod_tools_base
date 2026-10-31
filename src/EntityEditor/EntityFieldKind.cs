@@ -16,6 +16,8 @@ namespace Cthangover.Tools.EntityEditor
         /// <summary>Several names of a list written as <c>"A,B"</c> (an enum with flags).</summary>
         Flags,
         /// <summary>A JSON array of strings picked from a list.</summary>
-        List
+        List,
+        /// <summary>Numbers typed as <c>"x, y"</c> and stored as a JSON array of numbers (read and written with the invariant culture).</summary>
+        Numbers
     }
 }

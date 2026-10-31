@@ -15,6 +15,10 @@ Los editores de escenas, escenarios, mapa del mundo, interactivos y luces, el co
 - **Formularios por esquema** — editores de campos generados a partir de las anotaciones de `schema_base` (escalares, listas, mapas, textos localizados).
 - **Contratos entre herramientas** — `IScenarioResourceEditor` permite a una ventana pedir al editor de escenarios que abra un archivo por su dirección dentro del mod; `IScenarioTextTarget` y `ScenarioTextTargets` dirigen la inserción de la paleta de comandos al último escenario enfocado. Los editores se dan de baja al cerrarse su ventana.
 
+- **Entidades de otros mods** — la lista puede mostrar las entradas de las dependencias del mod. Editar una de ellas se escribe como parche en el mod editado (`patches/<tipo>/<mod>.json`); el archivo del dueño no cambia. Las insignias de los campos muestran de dónde viene el valor (su parche, el de otro mod o herencia); **↺** restablece un campo.
+- **Campos de solo lectura** — `EntityField.Locked` muestra un campo que no se puede cambiar, para un valor que la entidad calcula desde otro lugar (la salud de un personaje con estadísticas).
+- **Contrato `IMapPickupEditor`** — el botón «Place on map» del editor de objetos pide al Editor de mapas RPG que se abra con un objeto de recogida listo para colocar.
+
 ## Escribir una herramienta sobre ella
 
 Depende de `tools_base>=1`, implementa `IToolProvider` (construye la ventana) y, para una entrada en la caja de herramientas, `IToolBoxButton`. El juego los descubre en los ensamblados de los mods; no hace falta nada en el manifiesto. Escribe archivos solo con `ModFileService`, así los mods empaquetados siguen siendo de solo lectura.

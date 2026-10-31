@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Cthangover.Core.Mods;
 using Cthangover.Core.Mods.Providers;
 
@@ -82,6 +83,30 @@ namespace Cthangover.Tools.Services
         }
 
         /// <summary>
+        /// Removes a file of a folder-backed mod (an editor's patch file that lost its last entry) and
+        /// the folders it leaves empty inside the mod. True when the file is gone afterwards; false for
+        /// read-only mods and empty paths.
+        /// </summary>
+        public static bool DeleteFile(string modId, string relativePath)
+        {
+            var absolute = GetWritablePath(modId, relativePath);
+            if (absolute == null || ModManager.Instance.GetMod(modId)?.FileProvider is not FolderModFileProvider provider)
+                return false;
+            if (File.Exists(absolute))
+                File.Delete(absolute);
+            var root = Path.GetFullPath(provider.RootPath).TrimEnd(Path.DirectorySeparatorChar);
+            var directory = Path.GetDirectoryName(absolute);
+            while (!string.IsNullOrEmpty(directory) && directory.Length > root.Length
+                   && directory.StartsWith(root, StringComparison.Ordinal)
+                   && Directory.Exists(directory) && !Directory.EnumerateFileSystemEntries(directory).Any())
+            {
+                Directory.Delete(directory);
+                directory = Path.GetDirectoryName(directory);
+            }
+            return true;
+        }
+
+        /// <summary>
         /// Absolute path a file of a folder-backed mod has (or would have once
         /// written); <c>null</c> for read-only mods and empty paths.
         /// </summary>
@@ -94,7 +119,8 @@ namespace Cthangover.Tools.Services
                 || string.IsNullOrEmpty(provider.RootPath))
                 return null;
 
-            return Path.GetFullPath(Path.Combine(provider.RootPath, relativePath.Replace('\\', '/')));
+            var normalized = ModPath.Normalize(relativePath);
+            return normalized.Length == 0 ? null : Path.GetFullPath(Path.Combine(provider.RootPath, normalized));
         }
 
         private static void Collect(string modId, string directory, string extension, List<string> result)

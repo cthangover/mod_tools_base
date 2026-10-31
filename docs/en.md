@@ -4,14 +4,17 @@
 
 ## Who uses it
 
-The scene, scenario, world map, interactive and light editors, the Scene Builder, Catalog Export, the item and character editors, the RPG map and tileset editors and the schema tools (`schema_tools`) all depend on it.
+The scene, scenario, world map, interactive and light editors, the Scene Builder, Catalog Export, the item and character editors, the RPG map editor (`rpg_editor`), the RPG object editor (`rpg_object_editor`) and the schema tools (`schema_tools`) all depend on it.
 
 ## What it gives a tool
 
 - **`ToolUi`** — the common look of tool windows: buttons, fields, sections, dividers, status line, translated labels (`ToolUi.Tr`). Window chrome itself (`ToolWindow`) stays in `ui_base`.
 - **Widgets** — `ModFileSelector` (pick a writable mod and a file under a folder), `FilteredList`, `CollapsibleSection`, `BackgroundCanvas` (a scene background with zoom), `DragHandle`.
 - **Files** — `ModFileService` (read/write a mod-relative file only in folder mods), `ModResourceService`, `SceneFileService`/`SceneBackgroundService` (logical scenes and their backgrounds), `LocaleFileService` and `PropertiesText` (edit `.properties` texts in every language of a mod without losing comments and order).
-- **Entity editors** — `EntityEditorWindow`, `EntityDocument`, `EntityField`: a searchable list plus a form with texts in all languages, pictures and JSON fields. The item and character editors are built on it (see `docs/concepts/tools.md`).
+- **Entity editors** — `EntityEditorWindow`, `EntityDocument`, `EntityField`: a searchable list plus a form with texts in all languages, pictures and JSON fields. The item, character and RPG object editors are built on it (see `docs/concepts/tools.md`).
+- **Other mods' entities** — the list can show the entries of the mod's dependencies. An edit of such an entry is written as a patch in the edited mod (`patches/<kind>/<mod>.json`), so the owner's file never changes. Field badges show whether a value is your patch, another mod's patch or inherited; **↺** resets a field.
+- **Read-only fields** — `EntityField.Locked` shows a field without letting it change, for a value the entity computes from elsewhere (a character's health with stats).
+- **Contracts between tools** also include `IMapPickupEditor`: the item editor's *Place on map* asks the RPG map editor to open with a pickup ready to place.
 - **Schema forms** — field editors generated from `schema_base` annotations (scalars, lists, maps, localized texts).
 - **Contracts between tools** — `IScenarioResourceEditor` lets one window ask the scenario editor to open a file by its mod-relative address; `IScenarioTextTarget` and `ScenarioTextTargets` route command-palette insertion to the last focused scenario document. Editors unregister themselves when their window closes.
 

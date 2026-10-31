@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Cthangover.Core.Mods.Patches;
 
 namespace Cthangover.Tools.EntityEditor
 {
@@ -22,6 +23,14 @@ namespace Cthangover.Tools.EntityEditor
     /// Localized texts are part of the document too (<see cref="SetText"/>): the
     /// form shows a name in every language of the mod, and an undo step restores
     /// texts and data together. Undo works on whole states, as in the map editor.
+    /// <para/>
+    /// Entities of other mods join with <see cref="AttachForeign"/>: they are listed in
+    /// <see cref="Foreign"/>, edited like own ones, and written as the edited mod's patch file
+    /// (<c>patches/&lt;kind&gt;/&lt;mod&gt;.json</c>) — one entry per entity holding only the
+    /// difference from the value without that patch (<see cref="JsonPatchDiff"/>). Resetting an
+    /// entity or a field removes its keys from the patch instead of copying the inherited value;
+    /// deleting a foreign entity writes <c>"$delete": true</c>. The patch file is part of the undo
+    /// state, so Ctrl+Z covers it too.
     /// </summary>
     public class EntityDocument
     {
@@ -40,6 +49,11 @@ namespace Cthangover.Tools.EntityEditor
         private readonly List<string> redo = new();
         private Dictionary<string, string> texts = new(StringComparer.Ordinal);
         private Dictionary<string, string> savedTexts = new(StringComparer.Ordinal);
+        private readonly List<EntityRecord> foreign = new();
+        private readonly Dictionary<string, JsonObject> bases = new(StringComparer.OrdinalIgnoreCase);
+        private Func<string, JsonObject> baseOf;
+        private JsonObject patchRoot;
+        private string savedPatchText;
 
         /// <summary>Entity kind of the document.</summary>
         public string Kind { get; }
@@ -49,6 +63,15 @@ namespace Cthangover.Tools.EntityEditor
 
         /// <summary>The entities in file order (files sorted by path).</summary>
         public IReadOnlyList<EntityRecord> Records => records;
+
+        /// <summary>Entities of other mods offered for editing as a patch (empty until <see cref="AttachForeign"/>).</summary>
+        public IReadOnlyList<EntityRecord> Foreign => foreign;
+
+        /// <summary>The edited mod's patch file of the kind, or null while no foreign entities are attached.</summary>
+        public string PatchFile { get; private set; }
+
+        /// <summary>The DTO of the kind (normalises values before diffing); may be null.</summary>
+        public Type EntityType { get; private set; }
 
         /// <summary>True when there is a step to undo.</summary>
         public bool CanUndo => undo.Count > 0;
@@ -130,17 +153,217 @@ namespace Cthangover.Tools.EntityEditor
             Rebuild();
         }
 
-        /// <summary><paramref name="wanted"/> when no entity has it, else <c>wanted_2</c>, <c>wanted_3</c>…</summary>
+        /// <summary><paramref name="wanted"/> when no entity (own or foreign) has it, else <c>wanted_2</c>, <c>wanted_3</c>…</summary>
         public string FreeId(string wanted)
         {
             var id = wanted;
-            for (var number = 2; records.Any(r => string.Equals(r.Id, id, StringComparison.OrdinalIgnoreCase)); number++)
+            for (var number = 2; records.Concat(foreign).Any(r => string.Equals(r.Id, id, StringComparison.OrdinalIgnoreCase)); number++)
                 id = wanted + "_" + number;
             return id;
         }
 
         /// <summary>The record with this id, or null.</summary>
         public EntityRecord Find(string id) => records.FirstOrDefault(r => r.Id == id);
+
+        /// <summary>The foreign entity with this id (case-insensitive), or null.</summary>
+        public EntityRecord FindForeign(string id) => id == null ? null : foreign.FirstOrDefault(r => string.Equals(r.Id, id, StringComparison.OrdinalIgnoreCase));
+
+        /// <summary>An own entity with this id, else a foreign one, else null.</summary>
+        public EntityRecord FindAny(string id) => Find(id) ?? FindForeign(id);
+
+        // ── entities of other mods ─────────────────────────────────
+
+        /// <summary>
+        /// Adds other mods' entities, edited through the patch file <paramref name="patchFile"/> of the
+        /// edited mod (its current text <paramref name="patchText"/>, null when there is none yet).
+        /// Ids the mod defines itself are skipped. <paramref name="resolveBase"/> gives an entity's value
+        /// as the game sees it without this patch file (null when it cannot be resolved); it is asked
+        /// once per entity, when the entity is first used.
+        /// </summary>
+        public void AttachForeign(string patchFile, string patchText, Type entityType,
+            IEnumerable<(string Id, string OwnerMod, string File, JsonObject Written)> entities, Func<string, JsonObject> resolveBase)
+        {
+            PatchFile = patchFile;
+            EntityType = entityType;
+            baseOf = resolveBase;
+            bases.Clear();
+            foreign.Clear();
+            patchRoot = null;
+            try
+            {
+                patchRoot = string.IsNullOrWhiteSpace(patchText) ? null : JsonNode.Parse(patchText) as JsonObject;
+            }
+            catch (JsonException)
+            {
+                patchRoot = null;
+            }
+            patchRoot ??= new JsonObject();
+            if (patchRoot["Items"] is not JsonArray)
+                patchRoot["Items"] = new JsonArray();
+            savedPatchText = Serialize(patchRoot);
+
+            var own = new HashSet<string>(records.Select(r => r.Id), StringComparer.OrdinalIgnoreCase);
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var entity in entities.Reverse())
+            {
+                if (string.IsNullOrEmpty(entity.Id) || own.Contains(entity.Id) || !seen.Add(entity.Id))
+                    continue;
+                foreign.Add(new EntityRecord(entity.Id, entity.OwnerMod, entity.File, entity.Written, ResolveForeign));
+            }
+            foreign.Reverse();
+        }
+
+        /// <summary>The value of a foreign entity without the edited mod's patch (cached), or null.</summary>
+        public JsonObject BaseOf(EntityRecord record)
+        {
+            if (record == null || !record.IsForeign)
+                return null;
+            if (!bases.TryGetValue(record.Id, out var value))
+            {
+                value = baseOf?.Invoke(record.Id);
+                bases[record.Id] = value;
+            }
+            return value;
+        }
+
+        /// <summary>The patch entry the edited mod has for <paramref name="id"/> now (with unsaved edits), or null.</summary>
+        public JsonObject PatchOf(string id)
+            => id == null ? null : PatchItems()?.OfType<JsonObject>().FirstOrDefault(e => string.Equals(e["Id"]?.ToString(), id, StringComparison.OrdinalIgnoreCase));
+
+        /// <summary>True when the edited mod's patch deletes this foreign entity (<c>"$delete": true</c>).</summary>
+        public bool IsDeleted(EntityRecord record)
+            => record != null && record.IsForeign && EntityJson.Get(PatchOf(record.Id), "$delete", out _) is JsonValue flag
+               && flag.GetValueKind() == JsonValueKind.True;
+
+        /// <summary>
+        /// Turns the edited <see cref="EntityRecord.Data"/> of a foreign entity into its patch entry: the
+        /// minimal difference from <see cref="BaseOf"/>, compared as the game reads both (so the form's
+        /// spelling of a value never makes a change). No difference removes the entry.
+        /// </summary>
+        public void CommitForeign(EntityRecord record)
+        {
+            var baseValue = BaseOf(record);
+            if (baseValue == null || record.Data == null)
+                return;
+            var edited = EntityJson.Normalize(record.Data, EntityType) ?? record.Data;
+            var diff = JsonPatchDiff.Diff(baseValue, edited, EntityType);
+            EntityJson.Get(diff, "Id", out var idKey);
+            if (idKey != null)
+                diff.Remove(idKey);
+            SetEntry(record.Id, diff.Count == 0 ? null : diff);
+        }
+
+        /// <summary>Writes <c>"$delete": true</c> for a foreign entity: the game drops it, its owner's file stays.</summary>
+        public void DeleteForeign(EntityRecord record)
+        {
+            if (record == null || !record.IsForeign)
+                return;
+            SetEntry(record.Id, new JsonObject { ["$delete"] = true });
+            record.Invalidate();
+        }
+
+        /// <summary>Removes the edited mod's patch entry of a foreign entity: the game sees the inherited value again.</summary>
+        public void ResetForeign(EntityRecord record)
+        {
+            if (record == null || !record.IsForeign)
+                return;
+            SetEntry(record.Id, null);
+            record.Invalidate();
+        }
+
+        /// <summary>
+        /// "Reset to inherited" for one top-level property: an own entity loses the key (its
+        /// <c>Extends</c> parent or the default shows through), a foreign one loses it from the patch.
+        /// </summary>
+        public void ResetField(EntityRecord record, string key)
+        {
+            if (record?.Data == null)
+                return;
+            if (!record.IsForeign)
+            {
+                EntityJson.Get(record.Data, key, out var found);
+                if (found != null)
+                    record.Data.Remove(found);
+                return;
+            }
+
+            var inherited = EntityJson.Get(BaseOf(record), key, out _);
+            EntityJson.Get(record.Data, key, out var spelled);
+            if (spelled != null)
+                record.Data.Remove(spelled);
+            if (inherited != null)
+                record.Data[spelled ?? key] = inherited.DeepClone();
+            CommitForeign(record);
+        }
+
+        /// <summary>
+        /// The patch file when it changed since loading or the last <see cref="MarkSaved"/>: its text,
+        /// or a null text when it lost its last entry and should be removed. Null when unchanged.
+        /// </summary>
+        public (string Path, string Text)? ChangedPatch()
+        {
+            if (PatchFile == null || patchRoot == null)
+                return null;
+            var text = Serialize(patchRoot);
+            if (text == savedPatchText)
+                return null;
+            return (PatchFile, PatchItems().Count == 0 && patchRoot.Count == 1 ? null : text);
+        }
+
+        private JsonObject ResolveForeign(EntityRecord record)
+        {
+            var value = BaseOf(record);
+            if (value == null)
+                return null;
+            var resolved = (JsonObject)value.DeepClone();
+            var entry = PatchOf(record.Id);
+            if (entry == null || IsDeleted(record))
+                return resolved;
+            var body = (JsonObject)entry.DeepClone();
+            EntityJson.Get(body, "Id", out var idKey);
+            if (idKey != null)
+                body.Remove(idKey);
+            try
+            {
+                JsonPatchMerger.Apply(resolved, body, EntityType);
+            }
+            catch (JsonPatchException)
+            {
+                return (JsonObject)value.DeepClone();
+            }
+            return EntityJson.Normalize(resolved, EntityType) ?? resolved;
+        }
+
+        private JsonArray PatchItems() => patchRoot?["Items"] as JsonArray;
+
+        /// <summary>Replaces the entries of <paramref name="id"/> with one (Id first), or removes them when <paramref name="body"/> is null.</summary>
+        private void SetEntry(string id, JsonObject body)
+        {
+            var items = PatchItems();
+            if (items == null)
+                return;
+            var index = -1;
+            for (var i = items.Count - 1; i >= 0; i--)
+            {
+                if (items[i] is JsonObject entry && string.Equals(entry["Id"]?.ToString(), id, StringComparison.OrdinalIgnoreCase))
+                {
+                    items.RemoveAt(i);
+                    index = i;
+                }
+            }
+            if (body == null)
+                return;
+            var written = new JsonObject { ["Id"] = id };
+            foreach (var pair in body.ToList())
+            {
+                body.Remove(pair.Key);
+                written[pair.Key] = pair.Value;
+            }
+            if (index >= 0)
+                items.Insert(index, written);
+            else
+                items.Add(written);
+        }
 
         /// <summary>A localized text the document holds (see <see cref="SetText"/>), or null when it was never set or loaded.</summary>
         public string GetText(string language, string key)
@@ -189,6 +412,8 @@ namespace Cthangover.Tools.EntityEditor
         {
             foreach (var (path, text) in ChangedFiles())
                 savedText[path] = text;
+            if (patchRoot != null)
+                savedPatchText = Serialize(patchRoot);
             savedTexts = new Dictionary<string, string>(texts, StringComparer.Ordinal);
         }
 
@@ -229,7 +454,8 @@ namespace Cthangover.Tools.EntityEditor
             var state = new JsonObject
             {
                 ["files"] = new JsonObject(files.Select(f => new KeyValuePair<string, JsonNode>(f.Key, f.Value.DeepClone()))),
-                ["texts"] = new JsonObject(texts.Select(t => new KeyValuePair<string, JsonNode>(t.Key, t.Value)))
+                ["texts"] = new JsonObject(texts.Select(t => new KeyValuePair<string, JsonNode>(t.Key, t.Value))),
+                ["patch"] = patchRoot?.DeepClone()
             };
             return state.ToJsonString();
         }
@@ -245,6 +471,9 @@ namespace Cthangover.Tools.EntityEditor
             foreach (var file in state["files"].AsObject())
                 files[file.Key] = file.Value.DeepClone().AsObject();
             texts = state["texts"].AsObject().ToDictionary(t => t.Key, t => t.Value?.ToString() ?? string.Empty, StringComparer.Ordinal);
+            patchRoot = state["patch"]?.DeepClone().AsObject();
+            foreach (var record in foreign)
+                record.Invalidate();
             Rebuild();
             return true;
         }

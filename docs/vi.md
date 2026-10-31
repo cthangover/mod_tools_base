@@ -15,6 +15,10 @@ Trình sửa cảnh, kịch bản, bản đồ thế giới, tương tác và á
 - **Biểu mẫu theo lược đồ** — trình sửa trường sinh ra từ chú thích của `schema_base` (giá trị đơn, danh sách, từ điển, văn bản bản địa hóa).
 - **Giao ước giữa các công cụ** — `IScenarioResourceEditor` cho phép một cửa sổ nhờ trình sửa kịch bản mở tệp theo địa chỉ trong mod; `IScenarioTextTarget` và `ScenarioTextTargets` đưa phần chèn từ bảng lệnh vào kịch bản được focus gần nhất. Trình sửa tự hủy đăng ký khi cửa sổ đóng.
 
+- **Mục của mod khác** — danh sách có thể hiện các mục của các mod phụ thuộc. Sửa một mục như vậy được ghi thành bản vá trong mod đang sửa; tệp của chủ sở hữu không đổi. Huy hiệu ở trường cho biết giá trị đến từ đâu (bản vá của bạn, bản vá của mod khác, hoặc kế thừa); **↺** đặt lại trường.
+- **Trường chỉ đọc** — `EntityField.Locked` hiển thị trường không cho đổi, dành cho giá trị mà thực thể tính từ nơi khác (máu nhân vật khi có chỉ số).
+- **Hợp đồng `IMapPickupEditor`** — nút «Place on map» của trình sửa vật phẩm yêu cầu Trình chỉnh sửa bản đồ RPG mở với một vật thể nhặt sẵn sàng đặt.
+
 ## Viết công cụ trên nó
 
 Phụ thuộc `tools_base>=1`, cài đặt `IToolProvider` (dựng cửa sổ) và, nếu cần mục trong hộp công cụ, `IToolBoxButton`. Trò chơi tự tìm chúng trong assembly của mod; không cần ghi gì vào manifest. Chỉ ghi tệp qua `ModFileService`, khi đó mod đóng gói vẫn chỉ đọc.

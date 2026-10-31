@@ -18,7 +18,7 @@ namespace Cthangover.Tools.Schemas
     /// so a beginner types names and a professional can still rename the key. Texts go
     /// through the <see cref="EntityDocument"/> and are written by the window's Save.
     /// </summary>
-    public class LocaleFieldEditor : ISchemaFieldEditor
+    public class LocaleFieldEditor : ITextFieldEditor
     {
         private readonly SchemaFieldDefinition field;
         private readonly Action changed;
@@ -42,6 +42,12 @@ namespace Cthangover.Tools.Schemas
             keyEdit.AddThemeFontOverride("font", ToolUi.Mono());
             texts = new VBoxContainer();
             parent.AddChild(texts);
+        }
+
+        /// <inheritdoc />
+        public void SetEntityId(string id)
+        {
+            // A locale key is kept as the entity has it: nothing to make from the id here.
         }
 
         /// <summary>Builds one text row per language of <paramref name="mod"/>.</summary>
