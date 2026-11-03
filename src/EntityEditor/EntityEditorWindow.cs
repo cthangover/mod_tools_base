@@ -19,6 +19,8 @@ using Godot;
 
 namespace Cthangover.Tools.EntityEditor
 {
+    using Cthangover.Core.Events;
+
     /// <summary>
     /// Base of the data editors (items, characters…): every entity of one kind in
     /// one writable mod, a search list on the left and a form on the right built
@@ -51,7 +53,7 @@ namespace Cthangover.Tools.EntityEditor
     /// the own patch, another mod's patch — with a warning when it hides the own value — or an
     /// <c>Extends</c> parent; its "↺" removes the own key (from the file or the patch).
     /// </summary>
-    public abstract partial class EntityEditorWindow : ToolWindow
+    public abstract partial class EntityEditorWindow : ToolWindow, Cthangover.Tools.Contracts.IEntityCreationEditor
     {
         private readonly string kind;
         private readonly string folder;
@@ -123,6 +125,13 @@ namespace Cthangover.Tools.EntityEditor
         /// without initialisers.
         /// </summary>
         protected virtual Control CreatePreviewBlock() => null;
+
+        /// <summary>
+        /// References of a record that the schema does not describe, checked on save so the own mod gets the provider in
+        /// <c>depends</c> (plan 14.G16): an object's interaction names a scenario, a map or a shop. The default names none.
+        /// </summary>
+        protected virtual IEnumerable<(string Kind, string Id)> ExtraReferencesOf(JsonObject data)
+            => Enumerable.Empty<(string Kind, string Id)>();
 
         /// <summary>Called after the form shows an entity (null: none is selected) and after each edit of it.</summary>
         protected virtual void OnSelectionChanged(EntityRecord record)
@@ -1026,6 +1035,13 @@ namespace Cthangover.Tools.EntityEditor
 
         // ── commands ───────────────────────────────────────────────
 
+        /// <summary>Starts a new entity in the caller's content mod, respecting any unsaved form edits.</summary>
+        public void CreateNewInMod(string mod)
+        {
+            if (!mods.Contains(mod)) return;
+            RunDiscardingChanges(() => { DoOpenMod(mod); AddNew(); });
+        }
+
         private void AddNew()
         {
             if (document == null)
@@ -1206,6 +1222,11 @@ namespace Cthangover.Tools.EntityEditor
             }
             foreach (var (language, key, value) in changedTexts)
                 LocaleFileService.Write(modId, language, key, value);
+            // A reference to another mod's entity needs that mod in depends (plan 14.G16): the novice does not edit the manifest.
+            // Pictures, scenarios and maps a record names count too (plan 14.G16): the schema describes the first, ExtraReferencesOf the rest.
+            var fieldsOfKind = Cthangover.Mods.Schemas.SchemaCatalog.Current.FieldsOf(kind).ToList();
+            var added = ModDependencies.EnsureReferenced(modId, document.Records.Where(r => !r.IsForeign)
+                .SelectMany(r => ModDependencies.ReferencesOf(r.Data, fieldsOfKind).Concat(ExtraReferencesOf(r.Data))).ToList());
 
             document.MarkSaved();
             MarkClean();
@@ -1217,8 +1238,11 @@ namespace Cthangover.Tools.EntityEditor
             icons.Clear();
             if (changedTexts.Count > 0)
                 LocaleFileService.ReloadGame();
+            // Open windows that list this kind (the map editor's Characters tab) read the new caches at once (plan 14.G17).
+            ModEventBus.Publish(new EntitiesSavedEvent { Kind = kind, ModId = modId });
             GameLogger.Log("TOOLS", $"entity editor: saved {changedFiles.Count} {kind} file(s), {changedTexts.Count} text(s) of '{modId}'");
-            SetStatus(string.Format(ToolUi.Tr("tools/entity_editor/saved"), changedFiles.Count, changedTexts.Count, modId), ToolStatusKind.Ok);
+            var savedText = string.Format(ToolUi.Tr("tools/entity_editor/saved"), changedFiles.Count, changedTexts.Count, modId);
+            SetStatus(added.Count == 0 ? savedText : savedText + " " + ModDependencies.Notice(added), ToolStatusKind.Ok);
             if (selected != null)
                 Select(selected);
             return true;
