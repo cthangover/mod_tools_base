@@ -4,7 +4,7 @@
 
 ## 谁在用它
 
-场景、剧本、世界地图、交互物和光照编辑器，场景构建器，目录导出，物品和角色编辑器，RPG 地图和图块集编辑器，以及模式工具（`schema_tools`）。
+场景、脚本、世界地图、交互和灯光编辑器、Scene Builder、Catalog Export、物品与角色编辑器、`rpg_editor`、`rpg_object_editor`、`schema_tools` 使用此库。
 
 ## 它为工具提供什么
 
@@ -26,3 +26,7 @@
 ## 依赖
 
 `ui_base`、`schema_base`。测试套件 `isolation`（`--itest=tools_isolation`）检查它在没有安装任何编辑器窗口时也能工作。
+
+## 表单与重命名
+
+`schema_base` 表单包含从其他实体取值的 `pick` 与本地化任务步骤的 `stages`（`StageFieldEditor`、`ITextFieldEditor`）。`EntityRename`、`EntityRenameDialog` 在改 ID 前展示计划；`SchemaReferenceScanner` 查找由模式及 DSL 描述的引用。仅改写所选模组，外部引用只列出；先保存待处理编辑，Undo rename 恢复原文件。`IScenarioResourceEditor`、`IScenarioTextTarget`、`ScenarioTextTargets` 连接窗口并向最后聚焦的脚本插入内容。

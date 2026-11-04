@@ -4,7 +4,7 @@
 
 ## Quién la usa
 
-Los editores de escenas, escenarios, mapa del mundo, interactivos y luces, el constructor de escenas, la exportación de catálogo, los editores de objetos y personajes, los editores de mapas RPG y de tilesets y las herramientas de esquemas (`schema_tools`).
+Los editores de escenas, escenarios, mapa del mundo, interactivos y luces, Scene Builder, Catalog Export, los editores de objetos y personajes, `rpg_editor`, `rpg_object_editor` y `schema_tools` usan esta biblioteca.
 
 ## Qué aporta a una herramienta
 
@@ -26,3 +26,7 @@ Depende de `tools_base>=1`, implementa `IToolProvider` (construye la ventana) y,
 ## Dependencias
 
 `ui_base`, `schema_base`. La suite de pruebas `isolation` (`--itest=tools_isolation`) comprueba que funciona sin ninguna ventana de edición instalada.
+
+## Formularios y renombrado
+
+Los formularios de `schema_base` incluyen `pick` para valores de otras entidades y `stages` para pasos de misión localizados (`StageFieldEditor`, `ITextFieldEditor`). `EntityRename` y `EntityRenameDialog` muestran un plan antes de cambiar un ID: `SchemaReferenceScanner` encuentra referencias descritas por esquemas y DSL. Solo reescriben el mod elegido; las referencias externas se listan. Guardan cambios pendientes primero; Undo rename restaura los archivos originales. Los contratos `IScenarioResourceEditor`, `IScenarioTextTarget` y `ScenarioTextTargets` conectan las ventanas y la inserción en el último escenario enfocado.

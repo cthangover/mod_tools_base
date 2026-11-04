@@ -4,7 +4,7 @@
 
 ## 利用しているもの
 
-シーン、シナリオ、ワールドマップ、インタラクティブ、ライトの各エディター、シーンビルダー、カタログのエクスポート、アイテムとキャラクターのエディター、RPG マップとタイルセットのエディター、スキーマツール（`schema_tools`）。
+シーン、シナリオ、世界地図、操作、照明の各エディタ、Scene Builder、Catalog Export、アイテム・キャラクターエディタ、`rpg_editor`、`rpg_object_editor`、`schema_tools` がこのライブラリを使います。
 
 ## ツールに提供するもの
 
@@ -26,3 +26,7 @@
 ## 依存関係
 
 `ui_base`、`schema_base`。テストスイート `isolation`（`--itest=tools_isolation`）は、エディターウィンドウが一つもなくても動くことを確認します。
+
+## フォームと名前変更
+
+`schema_base` のフォームは他のエンティティの値を選ぶ `pick` と翻訳付きクエスト段階の `stages`（`StageFieldEditor`、`ITextFieldEditor`）を含みます。`EntityRename` と `EntityRenameDialog` は ID 変更前に計画を示し、`SchemaReferenceScanner` がスキーマと DSL の参照を探します。変更は選択 MOD のみで、外部参照は一覧します。保留中の編集を先に保存し、Undo rename で元のファイルを復元します。`IScenarioResourceEditor`、`IScenarioTextTarget`、`ScenarioTextTargets` がウィンドウと最後にフォーカスしたシナリオへの挿入を結びます。

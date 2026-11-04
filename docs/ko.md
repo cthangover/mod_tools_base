@@ -4,7 +4,7 @@
 
 ## 사용하는 곳
 
-장면, 시나리오, 월드맵, 상호작용, 조명 에디터, 장면 빌더, 카탈로그 내보내기, 아이템과 캐릭터 에디터, RPG 맵과 타일셋 에디터, 스키마 도구(`schema_tools`).
+씬, 시나리오, 월드맵, 상호작용, 조명 편집기, Scene Builder, Catalog Export, 아이템·캐릭터 편집기, `rpg_editor`, `rpg_object_editor`, `schema_tools`가 사용합니다.
 
 ## 도구에 제공하는 것
 
@@ -26,3 +26,7 @@
 ## 의존성
 
 `ui_base`, `schema_base`. 테스트 묶음 `isolation`(`--itest=tools_isolation`)은 에디터 창이 하나도 없어도 동작하는지 확인합니다.
+
+## 폼과 이름 변경
+
+`schema_base` 폼은 다른 엔티티 값 선택 `pick`과 번역된 퀘스트 단계 `stages`(`StageFieldEditor`, `ITextFieldEditor`)를 포함합니다. `EntityRename`, `EntityRenameDialog`는 ID 변경 전 계획을 보여 주고 `SchemaReferenceScanner`가 스키마와 DSL의 참조를 찾습니다. 선택 모드만 수정하며 외부 참조는 나열합니다. 보류 편집을 먼저 저장하고 Undo rename으로 원본 파일을 복원합니다. `IScenarioResourceEditor`, `IScenarioTextTarget`, `ScenarioTextTargets`가 창과 마지막 포커스 시나리오 삽입을 연결합니다.

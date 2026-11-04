@@ -4,7 +4,7 @@
 
 ## Ai dùng nó
 
-Trình sửa cảnh, kịch bản, bản đồ thế giới, tương tác và ánh sáng, trình dựng cảnh, xuất danh mục, trình sửa vật phẩm và nhân vật, trình sửa bản đồ RPG và tileset, và công cụ lược đồ (`schema_tools`).
+Các trình sửa cảnh, kịch bản, bản đồ thế giới, tương tác, ánh sáng, Scene Builder, Catalog Export, trình sửa vật phẩm/nhân vật, `rpg_editor`, `rpg_object_editor`, `schema_tools` dùng thư viện này.
 
 ## Nó cung cấp gì cho một công cụ
 
@@ -26,3 +26,7 @@ Phụ thuộc `tools_base>=1`, cài đặt `IToolProvider` (dựng cửa sổ) v
 ## Phụ thuộc
 
 `ui_base`, `schema_base`. Bộ kiểm thử `isolation` (`--itest=tools_isolation`) kiểm tra rằng nó chạy được khi không cài cửa sổ chỉnh sửa nào.
+
+## Biểu mẫu và đổi tên
+
+Biểu mẫu `schema_base` có `pick` chọn giá trị từ thực thể khác và `stages` sửa bước nhiệm vụ đa ngữ (`StageFieldEditor`, `ITextFieldEditor`). `EntityRename`, `EntityRenameDialog` trình bày kế hoạch trước khi đổi ID; `SchemaReferenceScanner` tìm tham chiếu do schema và DSL mô tả. Chỉ ghi lại mod chọn, liệt kê tham chiếu ngoài; lưu sửa đổi đang chờ trước và Undo rename khôi phục tệp gốc. `IScenarioResourceEditor`, `IScenarioTextTarget`, `ScenarioTextTargets` nối cửa sổ và chèn vào tài liệu vừa được lấy nét.
