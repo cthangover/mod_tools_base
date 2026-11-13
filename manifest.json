@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "author": "ct",
   "description": "Shared forms, file access, localization editing and UI components for authoring tools. No tool windows.",
-  "category": "engine, library",
+  "categories": ["engine", "library"],
   "sources": [
     "src/**/*.cs"
   ],
