@@ -13,8 +13,10 @@ namespace Cthangover.Tools.Tests.Isolation
     /// <summary>Exercises tools through their public contracts without depending on a concrete editor assembly.</summary>
     public partial class ToolsIsolationDriver : Node
     {
+        private int readinessToken = int.MinValue;
+        private ulong readinessStarted;
+        private ulong readinessFrame;
         private double elapsed;
-        private double next;
         private int passed;
         private int failed;
         private int index = -1;
@@ -33,9 +35,8 @@ namespace Cthangover.Tools.Tests.Isolation
                 Finish();
                 return;
             }
-            if (!Boot.IsReady || elapsed < next)
+            if (!Boot.IsReady)
                 return;
-            next = elapsed + 0.3;
             try
             {
                 Step();
@@ -47,8 +48,26 @@ namespace Cthangover.Tools.Tests.Isolation
             }
         }
 
+        // Deferred UI/scene work must finish before the original assertions run.
+        private bool WaitForReadyFrames(int token, bool ready, double timeoutSeconds = 30)
+        {
+            var now = global::Godot.Time.GetTicksMsec();
+            if (readinessToken != token)
+            {
+                readinessToken = token;
+                readinessStarted = now;
+                readinessFrame = 0;
+            }
+            if (now - readinessStarted > timeoutSeconds * 1000)
+                throw new global::System.TimeoutException($"readiness at step {token}: scene/UI did not become ready");
+            if (!ready) { readinessFrame = 0; return false; }
+            if (readinessFrame == 0) readinessFrame = global::Godot.Engine.GetProcessFrames();
+            return global::Godot.Engine.GetProcessFrames() - readinessFrame >= 2;
+        }
+
         private void Step()
         {
+            if (!WaitForReadyFrames(index, Boot.IsReady && GetTree().CurrentScene != null && (window == null || window.IsInsideTree() && window.Visible && window.Size.X > 0 && window.Size.Y > 0), 30)) return;
             if (index < 0)
             {
                 tools = ToolFactory.Instance.GetAll().OrderBy(t => t.Id, StringComparer.Ordinal).ToArray();
