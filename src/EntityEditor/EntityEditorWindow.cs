@@ -126,6 +126,9 @@ namespace Cthangover.Tools.EntityEditor
         /// </summary>
         protected virtual Control CreatePreviewBlock() => null;
 
+        /// <summary>Fields edited by a specialized inspector instead of a generic schema widget; raw JSON remains available for recovering malformed drafts.</summary>
+        protected virtual bool IsCustomField(string key) => false;
+
         /// <summary>
         /// References of a record that the schema does not describe, checked on save so the own mod gets the provider in
         /// <c>depends</c> (plan 14.G16): an object's interaction names a scenario, a map or a shop. The default names none.
@@ -230,6 +233,7 @@ namespace Cthangover.Tools.EntityEditor
             form.AddChild(ToolUi.Section("tools/entity_editor/section_other"));
             form.AddChild(ToolUi.Hint(ToolUi.Tr("tools/entity_editor/other_hint")));
             otherEdit = ToolUi.Code();
+            otherEdit.Name = "OtherFields";
             otherEdit.CustomMinimumSize = new Vector2(0, 160);
             otherEdit.SizeFlagsVertical = Control.SizeFlags.Fill;
             otherEdit.TextChanged += OnOtherChanged;
@@ -281,7 +285,7 @@ namespace Cthangover.Tools.EntityEditor
         private void BuildSchemaFields()
         {
             var described = Cthangover.Mods.Schemas.SchemaCatalog.Current.FieldsOf(kind)
-                .Where(f => !string.Equals(f.Key, "Id", StringComparison.OrdinalIgnoreCase) && !fields.Any(e => string.Equals(EntityPath.Top(e.Key), f.Key, StringComparison.OrdinalIgnoreCase)))
+                .Where(f => !IsCustomField(f.Key) && !string.Equals(f.Key, "Id", StringComparison.OrdinalIgnoreCase) && !fields.Any(e => string.Equals(EntityPath.Top(e.Key), f.Key, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
             if (described.Count == 0)
                 return;
@@ -1031,6 +1035,7 @@ namespace Cthangover.Tools.EntityEditor
                 document.CommitForeign(selected);
             SetDirty();
             SetStatus(ToolUi.Tr("tools/entity_editor/other_applied"));
+            OnSelectionChanged(selected);
         }
 
         // ── commands ───────────────────────────────────────────────
