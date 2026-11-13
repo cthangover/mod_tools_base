@@ -13,7 +13,7 @@ namespace Cthangover.Tools.EntityEditor.Tests
     public class ModDependenciesTests
     {
         private const string Own = "my_village";
-        private const string Manifest = "{\n  \"id\": \"my_village\",\n  \"name\": \"Моя деревня\",\n  \"depends\": [\n    \"ui_base>=1\"\n  ]\n}\n";
+        private const string Manifest = "{\n  \"id\": \"my_village\",\n  \"name\": \"Моя деревня\",\n  \"depends\": [\n    \"ui_base>=0.1.0\"\n  ]\n}\n";
 
         /// <summary>The direct dependencies of the test mods: rpg rests on ui_base, village_pack on rpg, a loop of two mods for the cycle test.</summary>
         private static IEnumerable<string> DependsOf(string modId) => modId switch
@@ -29,7 +29,7 @@ namespace Cthangover.Tools.EntityEditor.Tests
         {
             var outcome = ModDependencies.Insert(Manifest, "classic_rpg_pack", DependsOf, out var text);
             ModAssert.True(outcome == ModDependencyOutcome.Added, "a provider outside the closure is added");
-            ModAssert.True(text.Contains("\"classic_rpg_pack>=1\""), "as <id>>=1, the packaged style");
+            ModAssert.True(text.Contains("\"classic_rpg_pack>=0.1.0\""), "as <id>>=0.1.0, the packaged style");
             ModAssert.True(JsonNode.Parse(text)!["depends"]!.AsArray().Count == 2, "the old entry is kept");
             ModAssert.True(Insert(text, "classic_rpg_pack").Equals(ModDependencyOutcome.Present), "a second add finds it there");
         }
@@ -59,7 +59,7 @@ namespace Cthangover.Tools.EntityEditor.Tests
             var text0 = "{\n  \"id\": \"my_village\",\n  \"version\": \"0.1.0\"\n}\n";
             var outcome = ModDependencies.Insert(text0, "rpg_plus_game", DependsOf, out var text);
             ModAssert.True(outcome == ModDependencyOutcome.Added, "added");
-            ModAssert.True(JsonNode.Parse(text)!["depends"]!.AsArray().First()!.GetValue<string>() == "rpg_plus_game>=1", "the first entry");
+            ModAssert.True(JsonNode.Parse(text)!["depends"]!.AsArray().First()!.GetValue<string>() == "rpg_plus_game>=0.1.0", "the first entry");
         }
 
         [ModTest("deps/the_mod_itself_is_never_added")]
@@ -80,7 +80,7 @@ namespace Cthangover.Tools.EntityEditor.Tests
         [ModTest("deps/transitive_dependency_is_already_there")]
         static void TransitiveSkip(ModTestContext ctx)
         {
-            var withGame = "{\n  \"id\": \"my_village\",\n  \"depends\": [\"rpg_plus_game>=1\"]\n}\n";
+            var withGame = "{\n  \"id\": \"my_village\",\n  \"depends\": [\"rpg_plus_game>=0.1.0\"]\n}\n";
             ModAssert.True(ModDependencies.Insert(withGame, "village_pack", DependsOf, out var text) == ModDependencyOutcome.Present,
                 "village_pack comes through rpg_plus_game, nothing to add");
             ModAssert.True(text == null, "the manifest keeps its bytes");

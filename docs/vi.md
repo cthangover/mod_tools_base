@@ -21,7 +21,7 @@ Các trình sửa cảnh, kịch bản, bản đồ thế giới, tương tác, 
 
 ## Viết công cụ trên nó
 
-Phụ thuộc `tools_base>=1`, cài đặt `IToolProvider` (dựng cửa sổ) và, nếu cần mục trong hộp công cụ, `IToolBoxButton`. Trò chơi tự tìm chúng trong assembly của mod; không cần ghi gì vào manifest. Chỉ ghi tệp qua `ModFileService`, khi đó mod đóng gói vẫn chỉ đọc.
+Phụ thuộc `tools_base>=0.1.0`, cài đặt `IToolProvider` (dựng cửa sổ) và, nếu cần mục trong hộp công cụ, `IToolBoxButton`. Trò chơi tự tìm chúng trong assembly của mod; không cần ghi gì vào manifest. Chỉ ghi tệp qua `ModFileService`, khi đó mod đóng gói vẫn chỉ đọc.
 
 ## Phụ thuộc
 

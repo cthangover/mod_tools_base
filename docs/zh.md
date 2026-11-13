@@ -21,7 +21,7 @@
 
 ## 在它之上编写工具
 
-依赖 `tools_base>=1`，实现 `IToolProvider`（构建窗口），如需在工具箱中出现，再实现 `IToolBoxButton`。游戏会在模组程序集中自动发现它们，无需在清单中登记。只通过 `ModFileService` 写文件，这样打包的模组保持只读。
+依赖 `tools_base>=0.1.0`，实现 `IToolProvider`（构建窗口），如需在工具箱中出现，再实现 `IToolBoxButton`。游戏会在模组程序集中自动发现它们，无需在清单中登记。只通过 `ModFileService` 写文件，这样打包的模组保持只读。
 
 ## 依赖
 

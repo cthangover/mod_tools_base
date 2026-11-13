@@ -21,7 +21,7 @@ The scene, scenario, world map, interactive and light editors, the Scene Builder
 
 ## Writing a tool on it
 
-Depend on `tools_base>=1`, implement `IToolProvider` (builds the window) and, for a tool box entry, `IToolBoxButton`. The game discovers both in mod assemblies; no manifest entry is needed. Write files only through `ModFileService`, so packed mods stay read-only.
+Depend on `tools_base>=0.1.0`, implement `IToolProvider` (builds the window) and, for a tool box entry, `IToolBoxButton`. The game discovers both in mod assemblies; no manifest entry is needed. Write files only through `ModFileService`, so packed mods stay read-only.
 
 ## Dependencies
 

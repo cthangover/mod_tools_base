@@ -21,7 +21,7 @@ Los editores de escenas, escenarios, mapa del mundo, interactivos y luces, Scene
 
 ## Escribir una herramienta sobre ella
 
-Depende de `tools_base>=1`, implementa `IToolProvider` (construye la ventana) y, para una entrada en la caja de herramientas, `IToolBoxButton`. El juego los descubre en los ensamblados de los mods; no hace falta nada en el manifiesto. Escribe archivos solo con `ModFileService`, así los mods empaquetados siguen siendo de solo lectura.
+Depende de `tools_base>=0.1.0`, implementa `IToolProvider` (construye la ventana) y, para una entrada en la caja de herramientas, `IToolBoxButton`. El juego los descubre en los ensamblados de los mods; no hace falta nada en el manifiesto. Escribe archivos solo con `ModFileService`, así los mods empaquetados siguen siendo de solo lectura.
 
 ## Dependencias
 

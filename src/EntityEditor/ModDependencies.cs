@@ -19,7 +19,7 @@ namespace Cthangover.Tools.EntityEditor
     /// it on save, so the novice never edits <c>manifest.json</c> (plan 14.G16). The rule is the one the resource
     /// atlas checks: a reference to a foreign entity needs the provider in the transitive <c>depends</c>.
     /// <para/>
-    /// Rules of <see cref="Insert"/>: the entry is <c>"&lt;provider&gt;&gt;=1"</c> (the style of the packaged mods), appended
+    /// Rules of <see cref="Insert"/>: the entry is <c>"&lt;provider&gt;&gt;=0.1.0"</c> (the style of the packaged mods), appended
     /// to the array; a provider already in the transitive closure is left alone; the own mod is never added; a provider
     /// that depends on the own mod is refused (a cycle). An unchanged manifest is never written, so its bytes stay.
     /// The file is written with 2-space JSON and LF line ends; the running game keeps its loaded mod set until the next
@@ -76,7 +76,7 @@ namespace Cthangover.Tools.EntityEditor
                 depends = new JsonArray();
                 root["depends"] = depends;
             }
-            depends.Add(provider + ">=1");
+            depends.Add(provider + ">=0.1.0");
             text = root.ToJsonString(WriteOptions).Replace("\r\n", "\n") + "\n";
             return ModDependencyOutcome.Added;
         }
