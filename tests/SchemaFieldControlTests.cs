@@ -14,7 +14,7 @@ namespace Cthangover.Tools.Tests
         static void JsonFieldRoundtrip(ModTestContext ctx)
         {
             var parent = new VBoxContainer();
-            ((SceneTree)Engine.GetMainLoop()).Root.AddChild(parent);
+            ((SceneTree)Godot.Engine.GetMainLoop()).Root.AddChild(parent);
             try
             {
                 var field = new SchemaFieldControl(parent, new FieldSchema { Key = "Extra", Type = "json" }, null);

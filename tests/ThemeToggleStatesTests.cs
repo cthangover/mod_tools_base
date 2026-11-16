@@ -14,7 +14,7 @@ namespace Cthangover.Tools.Tests
         {
             // In the tree: styles are looked up through the theme owner only there.
             var theme = CthangoverTheme.Build();
-            var root = ((SceneTree)Engine.GetMainLoop()).Root;
+            var root = ((SceneTree)Godot.Engine.GetMainLoop()).Root;
             var controls = new (string What, Button Control)[]
             {
                 ("CheckBox", new CheckBox()),
