@@ -1,30 +1,29 @@
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using Cthangover.Core.Localization;
-using Cthangover.Core.Mods;
-using Cthangover.Core.Mods.Resolvers;
-using Cthangover.Core.UI.Theming;
-using Cthangover.Core.Utils;
-using Cthangover.Mods.Interface.Theming;
-using Cthangover.Mods.Interface.Tool;
-using Cthangover.Mods.Schemas;
-using Cthangover.Tools.Common;
-using Cthangover.Tools.Schemas;
-using Cthangover.Tools.Services;
-using Godot;
-
 namespace Cthangover.Tools.EntityEditor
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Globalization;
     using Cthangover.Core.Events;
+    using System.Linq;
+    using System.Text.Json;
+    using System.Text.Json.Nodes;
+    using Cthangover.Core.Localization;
+    using Cthangover.Core.Mods;
+    using Cthangover.Core.Mods.Resolvers;
+    using Cthangover.Core.UI.Theming;
+    using Cthangover.Core.Utils;
+    using Cthangover.Mods.Interface.Theming;
+    using Cthangover.Mods.Interface.Tool;
+    using Cthangover.Mods.Schemas;
+    using Cthangover.Tools.Common;
+    using Cthangover.Tools.Schemas;
+    using Cthangover.Tools.Services;
+    using Godot;
 
     /// <summary>
     /// Base of the data editors (items, characters…): every entity of one kind in
     /// one writable mod, a search list on the left and a form on the right built
-    /// from the editor's <see cref="EntityField"/> list. Layout and behaviour are
+    /// from the editor's <see cref = "EntityField"/> list. Layout and behaviour are
     /// shared by all such editors, so they look and work alike; a concrete editor
     /// only names its kind, its fields and how a new entity starts out.
     /// <para/>
@@ -49,7 +48,7 @@ namespace Cthangover.Tools.EntityEditor
     /// them). The form shows what the game sees, and an edit is written as the edited mod's patch
     /// (<c>patches/&lt;kind&gt;/&lt;mod&gt;.json</c>, the minimal difference), never into the
     /// owner's file; Delete writes <c>"$delete": true</c>, "Reset to inherited" removes the entry.
-    /// Under each field a badge tells where the value comes from (<see cref="EntityResolver.Explain"/>):
+    /// Under each field a badge tells where the value comes from (<see cref = "EntityResolver.Explain"/>):
     /// the own patch, another mod's patch — with a warning when it hides the own value — or an
     /// <c>Extends</c> parent; its "↺" removes the own key (from the file or the patch).
     /// </summary>
@@ -76,7 +75,6 @@ namespace Cthangover.Tools.EntityEditor
         private HashSet<string> savedIds = new(StringComparer.OrdinalIgnoreCase);
         private Button renameButton;
         private Button undoRenameButton;
-
         private OptionButton modPicker;
         private FilteredList list;
         private VBoxContainer form;
@@ -90,9 +88,12 @@ namespace Cthangover.Tools.EntityEditor
         private string modId;
         private bool suppress;
         private bool editing;
-
-        /// <summary>Builds the window for entities of <paramref name="entityKind"/>; new ones go to <c>&lt;folder&gt;/&lt;mod&gt;.json</c>.</summary>
-        protected EntityEditorWindow(string titleKey, string entityKind, string entityFolder, List<EntityField> entityFields) : base(titleKey)
+        /// <summary>
+        /// Builds the window for entities of <paramref name = "entityKind"/>; new ones go to
+        /// <c>&lt;folder&gt;/&lt;mod&gt;.json</c>.
+        /// </summary>
+        protected EntityEditorWindow(string titleKey, string entityKind, string entityFolder,
+             List<EntityField> entityFields) : base(titleKey)
         {
             kind = entityKind;
             folder = entityFolder;
@@ -105,17 +106,15 @@ namespace Cthangover.Tools.EntityEditor
 
         /// <summary>A new entity's JSON: the kind's required fields with starting values.</summary>
         protected abstract JsonObject CreateEntity(string id);
-
         /// <summary>Id a new entity starts from (numbered when taken), e.g. <c>&lt;mod&gt;/new_item</c>.</summary>
         protected abstract string NewIdBase(string mod);
-
         /// <summary>
         /// The picture a row shows, as a file group and a path read from the entity's JSON (null when none).
         /// Default: the first picture field. A foreign row passes its owner's definition.
         /// </summary>
         protected virtual (string Group, string Path) ThumbnailOf(JsonObject data)
         {
-            var first = fields.FirstOrDefault(f => f.Kind == EntityFieldKind.Picture);
+            var first = FirstField(EntityFieldKind.Picture);
             return first == null ? (null, null) : (first.Group, EntityPath.Get(data, first.Key)?.ToString());
         }
 
@@ -124,17 +123,37 @@ namespace Cthangover.Tools.EntityEditor
         /// the window is built, before the subclass constructor body runs: keep its own state in fields
         /// without initialisers.
         /// </summary>
-        protected virtual Control CreatePreviewBlock() => null;
+        protected virtual Control CreatePreviewBlock()
+        {
+            return null;
+        }
 
-        /// <summary>Fields edited by a specialized inspector instead of a generic schema widget; raw JSON remains available for recovering malformed drafts.</summary>
-        protected virtual bool IsCustomField(string key) => false;
+        /// <summary>
+        /// Fields edited by a specialized inspector instead of a generic schema widget; raw JSON remains available for
+        /// recovering malformed drafts.
+        /// </summary>
+        protected virtual bool IsCustomField(string key)
+        {
+            return false;
+        }
 
         /// <summary>
         /// References of a record that the schema does not describe, checked on save so the own mod gets the provider in
         /// <c>depends</c> (plan 14.G16): an object's interaction names a scenario, a map or a shop. The default names none.
         /// </summary>
         protected virtual IEnumerable<(string Kind, string Id)> ExtraReferencesOf(JsonObject data)
-            => Enumerable.Empty<(string Kind, string Id)>();
+        {
+            return Enumerable.Empty<(string Kind, string Id)>();
+        }
+
+        /// <summary>
+        /// Additional references owned by a specialized document, including sparse foreign patches. Called after
+        /// successful writes and before dependency discovery; the default leaves existing editors unchanged.
+        /// </summary>
+        protected virtual IEnumerable<(string Kind, string Id)> ExtraDocumentReferences()
+        {
+            return Enumerable.Empty<(string Kind, string Id)>();
+        }
 
         /// <summary>Called after the form shows an entity (null: none is selected) and after each edit of it.</summary>
         protected virtual void OnSelectionChanged(EntityRecord record)
@@ -142,28 +161,60 @@ namespace Cthangover.Tools.EntityEditor
         }
 
         /// <summary>The edited mod, or null.</summary>
-        public string ModId => modId;
+        public string ModId
+        {
+            get
+            {
+                return modId;
+            }
+        }
 
         /// <summary>The selected entity's id, or null.</summary>
-        public string SelectedId => selected?.Id;
+        public string SelectedId
+        {
+            get
+            {
+                return selected?.Id;
+            }
+        }
 
         /// <summary>The edited entities (null before a mod is opened).</summary>
-        public EntityDocument Document => document;
+        public EntityDocument Document
+        {
+            get
+            {
+                return document;
+            }
+        }
 
         // ── layout ─────────────────────────────────────────────────
+        /// <summary>Borrowed widget owner available before derived preview construction; the window owns its lifetime.</summary>
+        protected EntityEditorContent ViewRoot { get; private set; }
 
         private void BuildUi()
         {
+            ViewRoot = new EntityEditorContent(BuildContent);
+            AddChild(ViewRoot);
+            ViewRoot.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+            ViewRoot.EnsureConstructed();
+        }
+
+        private void BuildContent(EntityEditorContent owner)
+        {
             var outer = CreateFillContainer();
-            AddChild(outer);
+            owner.Mount(outer);
             outer.AddChild(BuildToolbar());
-
-            var main = new HSplitContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill, SizeFlagsVertical = Control.SizeFlags.ExpandFill };
+            var main = ViewRoot.Create<HSplitContainer>();
+            main.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+            main.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
             outer.AddChild(main);
-
-            var listColumn = new VBoxContainer { SizeFlagsVertical = Control.SizeFlags.ExpandFill };
+            var listColumn = ViewRoot.Create<VBoxContainer>();
+            listColumn.SizeFlagsVertical = Control.SizeFlags.ExpandFill;
             listColumn.AddChild(ToolUi.Section("tools/entity_editor/section_list"));
-            foreignToggle = new CheckBox { Text = ToolUi.Tr("tools/entity_editor/show_foreign"), TooltipText = ToolUi.Tr("tools/entity_editor/show_foreign_tip"), ButtonPressed = true };
+            foreignToggle = ViewRoot.Create<CheckBox>();
+            foreignToggle.Text = ToolUi.Tr("tools/entity_editor/show_foreign");
+            foreignToggle.TooltipText = ToolUi.Tr("tools/entity_editor/show_foreign_tip");
+            foreignToggle.ButtonPressed = true;
             foreignToggle.Toggled += OnForeignToggled;
             listColumn.AddChild(foreignToggle);
             list = new FilteredList(320f, "tools/entity_editor/search");
@@ -173,15 +224,18 @@ namespace Cthangover.Tools.EntityEditor
             listColumn.AddChild(list);
             var listPanel = CreateSidebar(listColumn, 320);
             main.AddChild(listPanel);
-
-            var scroll = new ScrollContainer { HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled, SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+            var scroll = ViewRoot.Create<ScrollContainer>();
+            scroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
+            scroll.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
             main.AddChild(scroll);
-            var column = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+            var column = ViewRoot.Create<VBoxContainer>();
+            column.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
             column.AddThemeConstantOverride("separation", UiTokens.Space2);
             scroll.AddChild(column);
             emptyHint = ToolUi.Hint(ToolUi.Tr("tools/entity_editor/no_entity"));
             column.AddChild(emptyHint);
-            form = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+            form = ViewRoot.Create<VBoxContainer>();
+            form.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
             form.AddThemeConstantOverride("separation", UiTokens.Space2);
             column.AddChild(form);
             BuildForm();
@@ -190,14 +244,17 @@ namespace Cthangover.Tools.EntityEditor
         private HBoxContainer BuildToolbar()
         {
             var toolbar = CreateToolbar();
-            modPicker = new OptionButton { TooltipText = ToolUi.Tr("tools/entity_editor/mod_tip") };
+            modPicker = ViewRoot.Create<OptionButton>();
+            modPicker.TooltipText = ToolUi.Tr("tools/entity_editor/mod_tip");
             modPicker.ItemSelected += OnModPicked;
             toolbar.AddChild(modPicker);
             toolbar.AddChild(ToolUi.Button("tools/common/save", OnSavePressed, ButtonKind.Primary, "tools/common/save_tip"));
             toolbar.AddChild(ToolUi.Divider());
             toolbar.AddChild(ToolUi.Button("tools/entity_editor/new", AddNew, ButtonKind.Secondary, "tools/entity_editor/new_tip"));
-            toolbar.AddChild(ToolUi.Button("tools/entity_editor/duplicate", DuplicateSelected, ButtonKind.Secondary, "tools/entity_editor/duplicate_tip"));
-            toolbar.AddChild(ToolUi.Button("tools/entity_editor/delete", DeleteSelected, ButtonKind.Secondary, "tools/entity_editor/delete_tip"));
+            toolbar.AddChild(ToolUi.Button("tools/entity_editor/duplicate", DuplicateSelected, ButtonKind.Secondary,
+                 "tools/entity_editor/duplicate_tip"));
+            toolbar.AddChild(ToolUi.Button("tools/entity_editor/delete", DeleteSelected, ButtonKind.Secondary,
+                 "tools/entity_editor/delete_tip"));
             toolbar.AddChild(ToolUi.Divider());
             toolbar.AddChild(ToolUi.Button("tools/entity_editor/undo", Undo, ButtonKind.Secondary, "tools/entity_editor/undo_tip"));
             toolbar.AddChild(ToolUi.Button("tools/entity_editor/redo", Redo, ButtonKind.Secondary, "tools/entity_editor/redo_tip"));
@@ -209,7 +266,7 @@ namespace Cthangover.Tools.EntityEditor
 
         private void BuildForm()
         {
-            var header = new HBoxContainer();
+            var header = ViewRoot.Create<HBoxContainer>();
             header.AddThemeConstantOverride("separation", UiTokens.Space3);
             fileLabel = ToolUi.Hint(string.Empty);
             header.AddChild(fileLabel);
@@ -224,11 +281,16 @@ namespace Cthangover.Tools.EntityEditor
             renameButton.Visible = false;
             form.AddChild(renameButton);
             foreach (var field in fields)
+            {
                 AddBadge(EntityPath.Top(field.Key), BuildField(field));
+            }
+
             BuildSchemaFields();
             var preview = CreatePreviewBlock();
             if (preview != null)
+            {
                 form.AddChild(preview);
+            }
 
             form.AddChild(ToolUi.Section("tools/entity_editor/section_other"));
             form.AddChild(ToolUi.Hint(ToolUi.Tr("tools/entity_editor/other_hint")));
@@ -243,7 +305,8 @@ namespace Cthangover.Tools.EntityEditor
         private Container BuildField(EntityField field)
         {
             // One block per field, so a form can hide the fields of the forms it does not need.
-            var host = new VBoxContainer { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+            var host = ViewRoot.Create<VBoxContainer>();
+            host.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
             form.AddChild(host);
             blocks[field] = host;
             switch (field.Kind)
@@ -255,42 +318,64 @@ namespace Cthangover.Tools.EntityEditor
                     controls[field] = ToolUi.Field(host, field.LabelKey, ToolUi.Text("", OnTextChanged), field.TooltipKey);
                     break;
                 case EntityFieldKind.Integer:
-                    controls[field] = ToolUi.Field(host, field.LabelKey, ToolUi.Number(-999999, 999999, 1, OnNumberChanged), field.TooltipKey);
+                    controls[field] = ToolUi.Field(host, field.LabelKey, ToolUi.Number(-999999, 999999, 1, OnNumberChanged),
+                         field.TooltipKey);
                     break;
                 case EntityFieldKind.Choice:
-                    var choice = ToolUi.Field(host, field.LabelKey, new OptionButton(), field.TooltipKey);
+                    var choice = ToolUi.Field(host, field.LabelKey, ViewRoot.Create<OptionButton>(), field.TooltipKey);
                     choice.ItemSelected += OnChoicePicked;
                     controls[field] = choice;
                     break;
                 case EntityFieldKind.Flags:
                 case EntityFieldKind.List:
-                    controls[field] = ToolUi.Field(host, field.LabelKey, new HFlowContainer(), field.TooltipKey);
+                    controls[field] = ToolUi.Field(host, field.LabelKey, ViewRoot.Create<HFlowContainer>(), field.TooltipKey);
                     break;
                 case EntityFieldKind.Picture:
                     BuildPicture(field, host);
                     break;
                 case EntityFieldKind.LocaleText:
                     // The texts get their rows when a mod is opened: its languages decide them.
-                    keyEdits[field] = ToolUi.Field(host, field.LabelKey, ToolUi.Text("", OnTextChanged), "tools/entity_editor/locale_key_tip");
+                    keyEdits[field] = ToolUi.Field(host, field.LabelKey, ToolUi.Text("", OnTextChanged),
+                         "tools/entity_editor/locale_key_tip");
                     keyEdits[field].AddThemeFontOverride("font", ToolUi.Mono());
-                    var texts = new VBoxContainer();
+                    var texts = ViewRoot.Create<VBoxContainer>();
                     host.AddChild(texts);
                     controls[field] = texts;
                     textEdits[field] = new Dictionary<string, LineEdit>();
                     break;
             }
+
             return host;
         }
 
         private void BuildSchemaFields()
         {
-            var described = Cthangover.Mods.Schemas.SchemaCatalog.Current.FieldsOf(kind)
-                .Where(f => !IsCustomField(f.Key) && !string.Equals(f.Key, "Id", StringComparison.OrdinalIgnoreCase) && !fields.Any(e => string.Equals(EntityPath.Top(e.Key), f.Key, StringComparison.OrdinalIgnoreCase)))
-                .ToList();
+            var described = new List<FieldSchema>();
+            foreach (var field in SchemaCatalog.Current.FieldsOf(kind))
+            {
+                if (!IsCustomField(field.Key) && !string.Equals(field.Key, "Id", StringComparison.OrdinalIgnoreCase) 
+                    && !HasTopField(field.Key))
+                {
+                    described.Add(field);
+                }
+            }
+
             if (described.Count == 0)
+            {
                 return;
+            }
+
             form.AddChild(ToolUi.Section("tools/entity_editor/section_schema"));
-            var sources = string.Join(", ", described.Select(f => f.SourceMod).Where(m => m != null).Distinct());
+            var sourceMods = new List<string>();
+            foreach (var field in described)
+            {
+                if (field.SourceMod != null && !sourceMods.Contains(field.SourceMod))
+                {
+                    sourceMods.Add(field.SourceMod);
+                }
+            }
+
+            var sources = string.Join(", ", sourceMods);
             form.AddChild(ToolUi.Hint(string.Format(ToolUi.Tr("tools/entity_editor/schema_hint"), sources)));
             foreach (var field in described)
             {
@@ -302,7 +387,10 @@ namespace Cthangover.Tools.EntityEditor
         private void AddBadge(string key, Container host)
         {
             if (badges.ContainsKey(key))
+            {
                 return;
+            }
+
             var badge = new FieldOriginBadge(key, ResetField);
             host.AddChild(badge);
             badges[key] = badge;
@@ -310,24 +398,22 @@ namespace Cthangover.Tools.EntityEditor
 
         private void BuildPicture(EntityField field, Container host)
         {
-            var row = new HBoxContainer();
+            var row = ViewRoot.Create<HBoxContainer>();
             var path = ToolUi.Text(field.Group + "/…", OnPictureTyped);
             path.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
             row.AddChild(path);
             var pick = UiKit.IconButton("…", ToolUi.Tr("tools/entity_editor/picture_pick_tip"));
-            pick.Pressed += () => OpenPicker(field);
+            pick.Pressed += new EntityPictureBinding(this, field).Pick;
             row.AddChild(pick);
             ToolUi.Field(host, field.LabelKey, row, field.TooltipKey);
             controls[field] = path;
-            var preview = new TextureRect
-            {
-                CustomMinimumSize = new Vector2(96, 96),
-                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-                StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-                TextureFilter = CanvasItem.TextureFilterEnum.Nearest,
-                SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin
-            };
-            var margin = new MarginContainer();
+            var preview = ViewRoot.Create<TextureRect>();
+            preview.CustomMinimumSize = new Vector2(96, 96);
+            preview.ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize;
+            preview.StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered;
+            preview.TextureFilter = CanvasItem.TextureFilterEnum.Nearest;
+            preview.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
+            var margin = ViewRoot.Create<MarginContainer>();
             margin.AddThemeConstantOverride("margin_left", ToolUi.LabelWidth + UiTokens.Space3);
             margin.AddChild(preview);
             host.AddChild(margin);
@@ -335,38 +421,57 @@ namespace Cthangover.Tools.EntityEditor
         }
 
         // ── mods and the list ──────────────────────────────────────
-
         private void FillMods()
         {
             mods.Clear();
             mods.AddRange(ModFileService.ListWritableMods());
             modPicker.Clear();
             foreach (var mod in mods)
+            {
                 modPicker.AddItem(mod);
+            }
+
             if (mods.Count == 0)
             {
                 SetStatus(ToolUi.Tr("tools/common/no_writable_mods"), ToolStatusKind.Error);
                 return;
             }
+
             // Start in the first mod that already has such entities: usually the game's own content.
-            var start = mods.FindIndex(m => LoadDocument(m).Records.Count > 0);
+            var start = -1;
+            for (var i = 0; i < mods.Count; i++)
+            {
+                if (LoadDocument(mods[i]).Records.Count > 0)
+                {
+                    start = i;
+                    break;
+                }
+            }
+
             OpenMod(mods[Math.Max(0, start)]);
         }
 
         private EntityDocument LoadDocument(string mod)
         {
-            var sources = ModFileService.ListFiles(mod, string.Empty, ".json")
-                .Select(path => (path, ModFileService.ReadText(mod, path)));
+            var sources = new List<(string Path, string Text)>();
+            foreach (var path in ModFileService.ListFiles(mod, string.Empty, ".json"))
+            {
+                sources.Add((path, ModFileService.ReadText(mod, path)));
+            }
+
             var loaded = EntityDocument.Load(kind, $"{folder}/{mod}.json", sources, out var skipped);
             if (skipped.Count > 0)
+            {
                 SetStatus(string.Format(ToolUi.Tr("tools/entity_editor/broken_files"), string.Join(", ", skipped)), ToolStatusKind.Error);
+            }
+
             return loaded;
         }
 
         /// <summary>Opens the entities of a mod (asks first about unsaved changes).</summary>
         public void OpenMod(string mod)
         {
-            RunDiscardingChanges(() => DoOpenMod(mod), () => modPicker.Select(mods.IndexOf(modId)));
+            RunDiscardingChanges(new EntityModRequest(this, mod, false).Open, RestoreModPicker);
         }
 
         private void DoOpenMod(string mod)
@@ -376,11 +481,17 @@ namespace Cthangover.Tools.EntityEditor
             document = LoadDocument(mod);
             AttachForeign(mod);
             languages = LocaleFileService.Languages(mod);
-            foreach (var field in fields.Where(f => f.Kind == EntityFieldKind.LocaleText))
+            foreach (var field in fields.Where(IsLocaleField))
+            {
                 BuildTextRows(field);
+            }
+
             foreach (var text in schemaEditors.OfType<ITextFieldEditor>())
+            {
                 text.Open(document, mod, languages);
-            savedIds = new HashSet<string>(document.Records.Select(r => r.Id), StringComparer.OrdinalIgnoreCase);
+            }
+
+            savedIds = new HashSet<string>(document.Records.Select(RecordId), StringComparer.OrdinalIgnoreCase);
             MarkClean();
             selected = null;
             RefreshList();
@@ -394,8 +505,10 @@ namespace Cthangover.Tools.EntityEditor
             dependencies = ForeignEntities.Dependencies(mod);
             var patchFile = ForeignEntities.PatchFile(kind, mod);
             document.AttachForeign(patchFile, ModFileService.ReadText(mod, patchFile), ForeignEntities.TypeOf(kind),
-                ForeignEntities.Scan(kind, mod), id => ForeignEntities.BaseWithout(kind, id, mod, patchFile));
-            GameLogger.Log("TOOLS", $"entity editor: {document.Foreign.Count} {kind} entities of {dependencies.Count} dependencies of '{mod}' listed in {started.ElapsedMilliseconds} ms");
+                 ForeignEntities.Scan(kind, mod), new EntityBaseLookup(kind, mod, patchFile).Resolve);
+            var listing = $"entity editor: {document.Foreign.Count} {kind} entities of "
+                + $"{dependencies.Count} dependencies of '{mod}' listed in {started.ElapsedMilliseconds} ms";
+            GameLogger.Log("TOOLS", listing);
         }
 
         private void BuildTextRows(EntityField field)
@@ -407,9 +520,13 @@ namespace Cthangover.Tools.EntityEditor
             {
                 var label = string.Format(ToolUi.Tr("tools/entity_editor/text_in"), language);
                 var edit = ToolUi.Text("", OnTextChanged);
-                var row = new HBoxContainer();
+                var row = ViewRoot.Create<HBoxContainer>();
                 row.AddThemeConstantOverride("separation", UiTokens.Space3);
-                row.AddChild(new Label { Text = label, CustomMinimumSize = new Vector2(ToolUi.LabelWidth, 0), HorizontalAlignment = HorizontalAlignment.Right });
+                var languageLabel = ViewRoot.Create<Label>();
+                languageLabel.Text = label;
+                languageLabel.CustomMinimumSize = new Vector2(ToolUi.LabelWidth, 0);
+                languageLabel.HorizontalAlignment = HorizontalAlignment.Right;
+                row.AddChild(languageLabel);
                 edit.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
                 row.AddChild(edit);
                 box.AddChild(row);
@@ -420,15 +537,29 @@ namespace Cthangover.Tools.EntityEditor
         /// <summary>Rebuilds the list from the document (own and listed foreign entities), keeping the selection.</summary>
         protected void RefreshList()
         {
-            var name = fields.FirstOrDefault(f => f.Kind == EntityFieldKind.LocaleText);
-            var rows = document.Records.Select(r => (r.Id, RowText(r, name), Thumbnail(r.Data)));
+            var name = FirstField(EntityFieldKind.LocaleText);
+            var rows = new List<(string Id, string Text, Texture2D Icon)>();
+            foreach (var record in document.Records)
+            {
+                rows.Add((record.Id, RowText(record, name), Thumbnail(record.Data)));
+            }
+
             if (foreignToggle.ButtonPressed)
-                rows = rows.Concat(document.Foreign.Select(r => (r.Id, ForeignRowText(r, name), Thumbnail(r.Written))));
-            list.SetItems(rows.ToList());
+            {
+                foreach (var record in document.Foreign)
+                {
+                    rows.Add((record.Id, ForeignRowText(record, name), Thumbnail(record.Written)));
+                }
+            }
+
+            list.SetItems(rows);
             list.Select(selected?.Id);
         }
 
-        /// <summary>A foreign entity's list text without resolving it: name in the current language, id, owner and the own patch's mark.</summary>
+        /// <summary>
+        /// A foreign entity's list text without resolving it: name in the current language, id, owner and the own patch's
+        /// mark.
+        /// </summary>
         private string ForeignRowText(EntityRecord record, EntityField nameField)
         {
             var key = nameField == null ? null : Shown(record, nameField.Key);
@@ -449,7 +580,10 @@ namespace Cthangover.Tools.EntityEditor
         private static string GameText(string language, string key)
         {
             if (language != (LanguageCode.Normalize(TranslationServer.GetLocale()) ?? "ru"))
+            {
                 return null;
+            }
+
             var text = TranslationServer.Translate(key).ToString();
             return text == key ? null : text;
         }
@@ -457,47 +591,61 @@ namespace Cthangover.Tools.EntityEditor
         private void OnForeignToggled(bool on)
         {
             if (document != null)
+            {
                 RefreshList();
+            }
         }
 
         private string RowText(EntityRecord record, EntityField nameField)
         {
             var key = nameField == null ? null : Str(record.Data, nameField.Key);
-            var text = key == null ? null : document.GetText(languages.FirstOrDefault() ?? "ru", key) ?? LocaleFileService.Read(modId, languages.FirstOrDefault() ?? "ru", key);
+            var text = key == null ? null : document.GetText(languages.FirstOrDefault() ?? "ru", key) ?? LocaleFileService.Read(modId,
+                 languages.FirstOrDefault() ?? "ru", key);
             return string.IsNullOrWhiteSpace(text) ? record.Id : $"{text}  ·  {record.Id}";
         }
 
         private Texture2D Thumbnail(JsonObject data)
         {
             if (data == null)
+            {
                 return null;
-            var (group, path) = ThumbnailOf(data);
+            }
+
+            var(group, path) = ThumbnailOf(data);
             return group == null || path == null ? null : Icon(group, path);
         }
 
         private Texture2D Icon(string group, string id)
         {
             if (string.IsNullOrEmpty(id))
+            {
                 return null;
+            }
+
             var cacheKey = group + "|" + id;
             if (!icons.TryGetValue(cacheKey, out var texture))
             {
                 texture = ModResourceService.LoadGroupImage(group, id);
                 icons[cacheKey] = texture;
             }
+
             return texture;
         }
 
-        private void OnChosen(string id) => Select(document?.FindAny(id));
+        private void OnChosen(string id)
+        {
+            Select(document?.FindAny(id));
+        }
 
         private void OnModPicked(long index)
         {
             if (index >= 0 && index < mods.Count && mods[(int)index] != modId)
+            {
                 OpenMod(mods[(int)index]);
+            }
         }
 
         // ── form ───────────────────────────────────────────────────
-
         /// <summary>Shows an entity in the form (null: none).</summary>
         public void Select(EntityRecord record)
         {
@@ -506,6 +654,7 @@ namespace Cthangover.Tools.EntityEditor
                 SetStatus(string.Format(ToolUi.Tr("tools/entity_editor/foreign_unresolved"), record.Id), ToolStatusKind.Error);
                 record = null;
             }
+
             selected = record;
             editing = false;
             emptyHint.Visible = record == null;
@@ -527,11 +676,20 @@ namespace Cthangover.Tools.EntityEditor
             renameButton.Visible = saved;
             idEdit.Text = record.Id;
             foreach (var field in fields)
+            {
                 ShowField(field, record.Data);
+            }
+
             foreach (var text in schemaEditors.OfType<ITextFieldEditor>())
+            {
                 text.SetEntityId(record.Id);
+            }
+
             foreach (var editor in schemaEditors)
-                editor.Load(record.Data.FirstOrDefault(p => string.Equals(p.Key, editor.Field.Key, StringComparison.OrdinalIgnoreCase)).Value);
+            {
+                editor.Load(FieldValue(record.Data, editor.Field.Key).Value);
+            }
+
             otherEdit.Text = OtherJson(record.Data);
             RefreshVisibility(record.Data);
             RefreshLocks(record.Data);
@@ -543,13 +701,16 @@ namespace Cthangover.Tools.EntityEditor
         private string HeaderText(EntityRecord record)
         {
             if (!record.IsForeign)
+            {
                 return string.Format(ToolUi.Tr("tools/entity_editor/file"), modId, record.File);
-            var text = string.Format(ToolUi.Tr("tools/entity_editor/foreign_file"), record.OwnerMod, record.File, modId, document.PatchFile);
+            }
+
+            var text = string.Format(ToolUi.Tr("tools/entity_editor/foreign_file"), record.OwnerMod, record.File, modId,
+                 document.PatchFile);
             return document.IsDeleted(record) ? text + " " + ToolUi.Tr("tools/entity_editor/foreign_deleted") : text;
         }
 
         // ── where values come from ─────────────────────────────────
-
         private void RefreshBadges()
         {
             foreach (var badge in badges.Values)
@@ -559,18 +720,24 @@ namespace Cthangover.Tools.EntityEditor
                     badge.Show(null, false, false);
                     continue;
                 }
+
                 var text = BadgeText(badge.Key, out var warning, out var canReset);
                 badge.Show(text, warning, canReset);
             }
         }
 
         private string BadgeText(string key, out bool warning, out bool canReset)
-            => FieldOrigins.Describe(selected, modId, document, explanation, dependencies, key, out warning, out canReset);
+        {
+            return FieldOrigins.Describe(selected, modId, document, explanation, dependencies, key, out warning, out canReset);
+        }
 
         private void ResetField(string key)
         {
             if (selected == null)
+            {
                 return;
+            }
+
             document.BeginChange();
             document.ResetField(selected, key);
             SetDirty();
@@ -582,7 +749,10 @@ namespace Cthangover.Tools.EntityEditor
         private void ResetEntity()
         {
             if (selected == null || !selected.IsForeign)
+            {
                 return;
+            }
+
             document.BeginChange();
             document.ResetForeign(selected);
             SetDirty();
@@ -598,6 +768,7 @@ namespace Cthangover.Tools.EntityEditor
                 ShowPathField(field, data);
                 return;
             }
+
             switch (field.Kind)
             {
                 case EntityFieldKind.Text:
@@ -610,10 +781,11 @@ namespace Cthangover.Tools.EntityEditor
                     FillChoice((OptionButton)controls[field], field, Str(data, field.Key));
                     break;
                 case EntityFieldKind.Flags:
-                    FillChecks((HFlowContainer)controls[field], field, (Str(data, field.Key) ?? string.Empty).Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
+                    FillChecks((HFlowContainer)controls[field], field, (Str(data, field.Key) ?? string.Empty).Split(',',
+                         StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries));
                     break;
                 case EntityFieldKind.List:
-                    FillChecks((HFlowContainer)controls[field], field, (data[field.Key] as JsonArray)?.Select(n => n?.ToString()).Where(s => s != null).ToArray() ?? Array.Empty<string>());
+                    FillChecks((HFlowContainer)controls[field], field, ArrayTexts(data[field.Key] as JsonArray));
                     break;
                 case EntityFieldKind.Picture:
                     var path = Str(data, field.Key) ?? string.Empty;
@@ -624,7 +796,10 @@ namespace Cthangover.Tools.EntityEditor
                     var key = Str(data, field.Key) ?? string.Empty;
                     keyEdits[field].Text = key;
                     foreach (var pair in textEdits[field])
+                    {
                         pair.Value.Text = TextOf(pair.Key, key);
+                    }
+
                     break;
             }
         }
@@ -632,13 +807,22 @@ namespace Cthangover.Tools.EntityEditor
         private string TextOf(string language, string key)
         {
             if (string.IsNullOrEmpty(key))
+            {
                 return string.Empty;
+            }
+
             var text = document.GetText(language, key);
             if (text != null)
+            {
                 return text;
+            }
+
             text = LocaleFileService.Read(modId, language, key);
             if (text == null && selected?.IsForeign == true)
+            {
                 text = LocaleFileService.Read(selected.OwnerMod, language, key) ?? GameText(language, key);
+            }
+
             text ??= string.Empty;
             document.LoadText(language, key, text);
             return text;
@@ -648,10 +832,16 @@ namespace Cthangover.Tools.EntityEditor
         {
             var options = (field.Options?.Invoke() ?? Enumerable.Empty<string>()).ToList();
             if (!string.IsNullOrEmpty(value) && !options.Contains(value))
+            {
                 options.Insert(0, value);
+            }
+
             picker.Clear();
             foreach (var option in options)
+            {
                 picker.AddItem(option);
+            }
+
             picker.Select(options.IndexOf(value ?? string.Empty));
         }
 
@@ -659,36 +849,62 @@ namespace Cthangover.Tools.EntityEditor
         {
             ClearChildren(box);
             var options = (field.Options?.Invoke() ?? Enumerable.Empty<string>()).ToList();
-            options.AddRange(values.Where(v => !options.Contains(v)));
+            foreach (var value in values)
+            {
+                if (!options.Contains(value))
+                {
+                    options.Add(value);
+                }
+            }
+
             foreach (var option in options)
             {
-                var check = new CheckBox { Text = option, ButtonPressed = values.Contains(option) };
+                var check = ViewRoot.Create<CheckBox>();
+                check.Text = option;
+                check.ButtonPressed = values.Contains(option);
                 check.Toggled += OnChecked;
                 box.AddChild(check);
             }
         }
 
-        private void OnTextChanged(string text) => WriteForm();
+        private void OnTextChanged(string text)
+        {
+            WriteForm();
+        }
 
-        private void OnNumberChanged(double value) => WriteForm();
+        private void OnNumberChanged(double value)
+        {
+            WriteForm();
+        }
 
-        private void OnChoicePicked(long index) => WriteForm();
+        private void OnChoicePicked(long index)
+        {
+            WriteForm();
+        }
 
-        private void OnChecked(bool on) => WriteForm();
+        private void OnChecked(bool on)
+        {
+            WriteForm();
+        }
 
         private void OnPictureTyped(string text)
         {
             WriteForm();
             foreach (var pair in previews)
+            {
                 pair.Value.Texture = ModResourceService.LoadGroupImage(pair.Key.Group, ((LineEdit)controls[pair.Key]).Text);
+            }
         }
 
-        private void OpenPicker(EntityField field)
+        internal void OpenPicker(EntityField field)
         {
             if (selected == null)
+            {
                 return;
+            }
+
             var dialog = new PicturePickerDialog(field.Group, ((LineEdit)controls[field]).Text);
-            dialog.Picked += id => ((LineEdit)controls[field]).Text = id;
+            dialog.Picked += new EntityPictureBinding(this, field).SetPath;
             dialog.Picked += OnPictureTyped;
             AddChild(dialog);
             dialog.PopupCentered();
@@ -698,7 +914,10 @@ namespace Cthangover.Tools.EntityEditor
         private void WriteForm()
         {
             if (suppress || selected == null)
+            {
                 return;
+            }
+
             if (!editing)
             {
                 document.BeginChange();
@@ -708,18 +927,29 @@ namespace Cthangover.Tools.EntityEditor
             var data = selected.Data;
             data["Id"] = idEdit.Text.Trim();
             foreach (var field in fields)
+            {
                 WriteField(field, data);
+            }
+
             foreach (var editor in schemaEditors)
             {
-                var key = data.FirstOrDefault(p => string.Equals(p.Key, editor.Field.Key, StringComparison.OrdinalIgnoreCase)).Key ?? editor.Field.Key;
+                var key = FieldValue(data, editor.Field.Key).Key ?? editor.Field.Key;
                 var value = editor.Save();
                 if (value == null)
+                {
                     data.Remove(key);
+                }
                 else
+                {
                     data[key] = value;
+                }
             }
+
             if (selected.IsForeign)
+            {
                 document.CommitForeign(selected);
+            }
+
             SetDirty();
             RefreshList();
             RefreshBadges();
@@ -731,12 +961,16 @@ namespace Cthangover.Tools.EntityEditor
         private void WriteField(EntityField field, JsonObject data)
         {
             if (field.When != null && !field.When(data))
+            {
                 return;
+            }
+
             if (ViaPath(field))
             {
                 WritePathField(field, data);
                 return;
             }
+
             switch (field.Kind)
             {
                 case EntityFieldKind.Text:
@@ -746,38 +980,60 @@ namespace Cthangover.Tools.EntityEditor
                 case EntityFieldKind.Integer:
                     var number = (int)((SpinBox)controls[field]).Value;
                     if (number != 0 || data.ContainsKey(field.Key))
+                    {
                         data[field.Key] = number;
+                    }
+
                     break;
                 case EntityFieldKind.Choice:
                     var picker = (OptionButton)controls[field];
                     if (picker.Selected >= 0)
+                    {
                         data[field.Key] = picker.GetItemText(picker.Selected);
+                    }
+
                     break;
                 case EntityFieldKind.Flags:
                     var flags = Checked((HFlowContainer)controls[field]);
                     if (flags.Count > 0 || data.ContainsKey(field.Key))
+                    {
                         data[field.Key] = flags.Count == 0 ? "None" : string.Join(",", flags);
+                    }
+
                     break;
                 case EntityFieldKind.List:
                     var values = Checked((HFlowContainer)controls[field]);
                     if (values.Count > 0 || data.ContainsKey(field.Key))
-                        data[field.Key] = new JsonArray(values.Select(v => (JsonNode)v).ToArray());
+                    {
+                        data[field.Key] = StringsNode(values);
+                    }
+
                     break;
                 case EntityFieldKind.LocaleText:
                     var key = keyEdits[field].Text.Trim();
                     SetOrRemove(data, field.Key, key);
                     if (key.Length == 0)
+                    {
                         break;
+                    }
+
                     foreach (var pair in textEdits[field])
+                    {
                         document.SetText(pair.Key, key, pair.Value.Text);
+                    }
+
                     break;
             }
         }
 
-        /// <summary>True for a field written only when edited: a number list, or a text, choice, number or picture inside a block.</summary>
+        /// <summary>
+        /// True for a field written only when edited: a number list, or a text, choice, number or picture inside a block.
+        /// </summary>
         private static bool ViaPath(EntityField field)
-            => field.Kind == EntityFieldKind.Numbers
-               || (EntityPath.IsNested(field.Key) && field.Kind is EntityFieldKind.Text or EntityFieldKind.Choice or EntityFieldKind.Integer or EntityFieldKind.Picture);
+        {
+            return field.Kind == EntityFieldKind.Numbers || (EntityPath.IsNested(field.Key) 
+                && field.Kind is EntityFieldKind.Text or EntityFieldKind.Choice or EntityFieldKind.Integer or EntityFieldKind.Picture);
+        }
 
         private void ShowPathField(EntityField field, JsonObject data)
         {
@@ -786,21 +1042,33 @@ namespace Cthangover.Tools.EntityEditor
             SetControlText(field, text);
         }
 
-        /// <summary>Writes a path field only when its control differs from what was shown: an untouched block keeps the file's own form.</summary>
+        /// <summary>
+        /// Writes a path field only when its control differs from what was shown: an untouched block keeps the file's own
+        /// form.
+        /// </summary>
         private void WritePathField(EntityField field, JsonObject data)
         {
             var text = CurrentText(field);
             if (shown.TryGetValue(field, out var before) && before == text)
+            {
                 return;
+            }
+
             if (!TryNodeOf(field, text, out var node, out var problem))
             {
                 SetStatus(string.Format(ToolUi.Tr("tools/entity_editor/numbers_invalid"), problem), ToolStatusKind.Error);
                 return;
             }
+
             if (node == null)
+            {
                 EntityPath.Remove(data, field.Key);
+            }
             else
+            {
                 EntityPath.Set(data, field.Key, node);
+            }
+
             shown[field] = text;
         }
 
@@ -809,12 +1077,14 @@ namespace Cthangover.Tools.EntityEditor
             switch (field.Kind)
             {
                 case EntityFieldKind.Integer:
-                    return node != null && int.TryParse(node.ToJsonString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var number)
-                        ? number.ToString(CultureInfo.InvariantCulture)
-                        : "0";
+                    return node != null && int.TryParse(node.ToJsonString(), NumberStyles.Integer, CultureInfo.InvariantCulture,
+                         out var number) ? number.ToString(CultureInfo.InvariantCulture) : "0";
                 case EntityFieldKind.Numbers:
                     if (node is JsonArray items)
+                    {
                         return string.Join(", ", items.Select(FormatNumber));
+                    }
+
                     return node == null ? string.Empty : FormatNumber(node);
                 default:
                     return node?.ToString() ?? string.Empty;
@@ -822,17 +1092,24 @@ namespace Cthangover.Tools.EntityEditor
         }
 
         private static string FormatNumber(JsonNode node)
-            => double.TryParse(node?.ToJsonString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var value)
-                ? value.ToString(CultureInfo.InvariantCulture)
-                : node?.ToString() ?? string.Empty;
+        {
+            return double.TryParse(node?.ToJsonString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var value) 
+                ? value.ToString(CultureInfo.InvariantCulture) : node?.ToString() ?? string.Empty;
+        }
 
-        /// <summary>The JSON value of a form text: null for an empty text (the property goes). False, with the offending text, when a number does not read.</summary>
+        /// <summary>
+        /// The JSON value of a form text: null for an empty text (the property goes). False, with the offending text, when
+        /// a number does not read.
+        /// </summary>
         private static bool TryNodeOf(EntityField field, string text, out JsonNode node, out string problem)
         {
             node = null;
             problem = null;
             if (text.Length == 0)
+            {
                 return true;
+            }
+
             switch (field.Kind)
             {
                 case EntityFieldKind.Integer:
@@ -841,6 +1118,7 @@ namespace Cthangover.Tools.EntityEditor
                         problem = text;
                         return false;
                     }
+
                     node = JsonValue.Create(number);
                     return true;
                 case EntityFieldKind.Numbers:
@@ -852,8 +1130,10 @@ namespace Cthangover.Tools.EntityEditor
                             problem = text;
                             return false;
                         }
+
                         values.Add(JsonValue.Create(value));
                     }
+
                     node = values;
                     return true;
                 default:
@@ -885,7 +1165,8 @@ namespace Cthangover.Tools.EntityEditor
                     FillChoice((OptionButton)controls[field], field, text);
                     break;
                 case EntityFieldKind.Integer:
-                    ((SpinBox)controls[field]).Value = int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number) ? number : 0;
+                    ((SpinBox)controls[field]).Value = int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture,
+                         out var number) ? number : 0;
                     break;
                 case EntityFieldKind.Picture:
                     ((LineEdit)controls[field]).Text = text;
@@ -897,13 +1178,16 @@ namespace Cthangover.Tools.EntityEditor
             }
         }
 
-        /// <summary>Makes the fields whose <see cref="EntityField.Locked"/> holds read-only for the entity.</summary>
+        /// <summary>Makes the fields whose <see cref = "EntityField.Locked"/> holds read-only for the entity.</summary>
         private void RefreshLocks(JsonObject data)
         {
-            foreach (var field in fields.Where(f => f.Locked != null))
+            foreach (var field in fields.Where(HasLock))
             {
                 if (!controls.TryGetValue(field, out var control))
+                {
                     continue;
+                }
+
                 var locked = data != null && field.Locked(data);
                 switch (control)
                 {
@@ -920,18 +1204,25 @@ namespace Cthangover.Tools.EntityEditor
             }
         }
 
-        /// <summary>Shows the fields whose <see cref="EntityField.When"/> holds for the entity (none when <paramref name="data"/> is null).</summary>
+        /// <summary>
+        /// Shows the fields whose <see cref = "EntityField.When"/> holds for the entity (none when <paramref name =
+        /// "data"/> is null).
+        /// </summary>
         private void RefreshVisibility(JsonObject data)
         {
-            foreach (var field in fields.Where(f => f.When != null))
+            foreach (var field in fields.Where(HasCondition))
             {
                 if (blocks.TryGetValue(field, out var block))
+                {
                     block.Visible = data != null && field.When(data);
+                }
             }
         }
 
         private static List<string> Checked(HFlowContainer box)
-            => box.GetChildren().OfType<CheckBox>().Where(c => c.ButtonPressed).Select(c => c.Text).ToList();
+        {
+            return box.GetChildren().OfType<CheckBox>().Where(IsChecked).Select(CheckText).ToList();
+        }
 
         /// <summary>Takes the children out of the tree at once (a search of the tree must not find them) and frees them.</summary>
         private static void ClearChildren(Node box)
@@ -946,17 +1237,24 @@ namespace Cthangover.Tools.EntityEditor
         private static void SetOrRemove(JsonObject data, string key, string value)
         {
             if (value.Length > 0)
+            {
                 data[key] = value;
+            }
             else
+            {
                 data.Remove(key);
+            }
         }
 
         /// <summary>The properties no field shows, as an indented JSON object.</summary>
         private string OtherJson(JsonObject data)
         {
             var other = new JsonObject();
-            foreach (var pair in WithoutFormPaths(data).Where(p => !IsFormKey(p.Key)))
+            foreach (var pair in WithoutFormPaths(data).Where(IsOtherPair))
+            {
                 other[pair.Key] = pair.Value?.DeepClone();
+            }
+
             return EntityDocument.Serialize(other).TrimEnd();
         }
 
@@ -968,8 +1266,11 @@ namespace Cthangover.Tools.EntityEditor
         private JsonObject WithoutFormPaths(JsonObject data)
         {
             var rest = (JsonObject)data.DeepClone();
-            foreach (var field in fields.Where(f => EntityPath.IsNested(f.Key)))
+            foreach (var field in fields.Where(IsNestedField))
+            {
                 EntityPath.Remove(rest, field.Key);
+            }
+
             return rest;
         }
 
@@ -977,36 +1278,54 @@ namespace Cthangover.Tools.EntityEditor
         private JsonObject FormPathValues(JsonObject data)
         {
             var values = new JsonObject();
-            foreach (var field in fields.Where(f => EntityPath.IsNested(f.Key)))
+            foreach (var field in fields.Where(IsNestedField))
             {
                 var value = EntityPath.Get(data, field.Key);
                 if (value != null)
+                {
                     EntityPath.Set(values, field.Key, value.DeepClone());
+                }
             }
+
             return values;
         }
 
-        /// <summary>The form's dotted-path values win over "other fields": each one is set as the form has it, or removed when the form has none.</summary>
+        /// <summary>
+        /// The form's dotted-path values win over "other fields": each one is set as the form has it, or removed when the
+        /// form has none.
+        /// </summary>
         private void ApplyFormPathValues(JsonObject data, JsonObject values)
         {
-            foreach (var field in fields.Where(f => EntityPath.IsNested(f.Key)))
+            foreach (var field in fields.Where(IsNestedField))
             {
                 var value = EntityPath.Get(values, field.Key);
                 if (value == null)
+                {
                     EntityPath.Remove(data, field.Key);
+                }
                 else
+                {
                     EntityPath.Set(data, field.Key, value.DeepClone());
+                }
             }
         }
 
-        /// <summary>Whether a top-level property belongs to a whole field (<c>Name</c>, <c>Anchor</c>), the id or a schema editor: those are not "other fields".</summary>
+        /// <summary>
+        /// Whether a top-level property belongs to a whole field (<c>Name</c>, <c>Anchor</c>), the id or a schema editor:
+        /// those are not "other fields".
+        /// </summary>
         private bool IsFormKey(string key)
-            => key == "Id" || fields.Any(f => string.Equals(f.Key, key, StringComparison.OrdinalIgnoreCase)) || schemaEditors.Any(e => string.Equals(e.Field.Key, key, StringComparison.OrdinalIgnoreCase));
+        {
+            return key == "Id" || HasFormKey(key);
+        }
 
         private void OnOtherChanged()
         {
             if (suppress || selected == null)
+            {
                 return;
+            }
+
             JsonObject other;
             try
             {
@@ -1017,50 +1336,73 @@ namespace Cthangover.Tools.EntityEditor
                 SetStatus(string.Format(ToolUi.Tr("tools/entity_editor/other_invalid"), ex.Message), ToolStatusKind.Error);
                 return;
             }
+
             if (other == null)
+            {
                 return;
+            }
+
             if (!editing)
             {
                 document.BeginChange();
                 editing = true;
             }
+
             var data = selected.Data;
             var kept = FormPathValues(data);
-            foreach (var key in data.Select(p => p.Key).Where(k => !IsFormKey(k)).ToList())
+            foreach (var key in data.Select(PairKey).Where(IsOtherKey).ToList())
+            {
                 data.Remove(key);
-            foreach (var pair in other.Where(p => !IsFormKey(p.Key)).ToList())
+            }
+
+            foreach (var pair in other.Where(IsOtherPair).ToList())
+            {
                 data[pair.Key] = pair.Value?.DeepClone();
+            }
+
             ApplyFormPathValues(data, kept);
             if (selected.IsForeign)
+            {
                 document.CommitForeign(selected);
+            }
+
             SetDirty();
             SetStatus(ToolUi.Tr("tools/entity_editor/other_applied"));
             OnSelectionChanged(selected);
         }
 
         // ── commands ───────────────────────────────────────────────
-
         /// <summary>Starts a new entity in the caller's content mod, respecting any unsaved form edits.</summary>
         public void CreateNewInMod(string mod)
         {
-            if (!mods.Contains(mod)) return;
-            RunDiscardingChanges(() => { DoOpenMod(mod); AddNew(); });
+            if (!mods.Contains(mod))
+            {
+                return;
+            }
+
+            RunDiscardingChanges(new EntityModRequest(this, mod, true).Open);
         }
 
         private void AddNew()
         {
             if (document == null)
+            {
                 return;
+            }
+
             document.BeginChange();
             var id = document.FreeId(NewIdBase(modId));
             var entity = CreateEntity(id);
-            foreach (var field in fields.Where(f => f.Kind == EntityFieldKind.LocaleText && f.KeyPattern != null))
+            foreach (var field in fields.Where(HasTextPattern))
             {
                 var key = string.Format(field.KeyPattern, id);
                 entity[field.Key] = key;
                 foreach (var language in languages)
+                {
                     document.SetText(language, key, field.Key == "Name" ? id.Substring(id.LastIndexOf('/') + 1) : string.Empty);
+                }
             }
+
             var record = document.Add(entity);
             SetDirty();
             RefreshList();
@@ -1071,11 +1413,13 @@ namespace Cthangover.Tools.EntityEditor
         private void DuplicateSelected()
         {
             if (selected == null)
+            {
                 return;
+            }
+
             document.BeginChange();
             // A foreign entity is copied into the edited mod under a free id: an own entity to change freely.
-            var record = selected.IsForeign
-                ? document.Add(CopyWithId(selected.Data, document.FreeId(selected.Id)))
+            var record = selected.IsForeign ? document.Add(CopyWithId(selected.Data, document.FreeId(selected.Id))) 
                 : document.Duplicate(selected, document.FreeId(selected.Id));
             SetDirty();
             RefreshList();
@@ -1085,7 +1429,10 @@ namespace Cthangover.Tools.EntityEditor
         private void DeleteSelected()
         {
             if (selected == null)
+            {
                 return;
+            }
+
             ShowConfirm("tools/entity_editor/delete_title", "tools/entity_editor/delete_text", ConfirmDelete);
         }
 
@@ -1094,20 +1441,30 @@ namespace Cthangover.Tools.EntityEditor
             var copy = (JsonObject)data.DeepClone();
             EntityJson.Get(copy, "Id", out var key);
             if (key != null)
+            {
                 copy.Remove(key);
-            var result = new JsonObject { ["Id"] = id };
+            }
+
+            var result = new JsonObject
+            {
+                ["Id"] = id
+            };
             foreach (var pair in copy.ToList())
             {
                 copy.Remove(pair.Key);
                 result[pair.Key] = pair.Value;
             }
+
             return result;
         }
 
         private void ConfirmDelete()
         {
             if (selected == null)
+            {
                 return;
+            }
+
             document.BeginChange();
             var id = selected.Id;
             if (selected.IsForeign)
@@ -1119,6 +1476,7 @@ namespace Cthangover.Tools.EntityEditor
                 SetStatus(string.Format(ToolUi.Tr("tools/entity_editor/deleted_foreign"), id));
                 return;
             }
+
             document.Remove(selected);
             SetDirty();
             Select(null);
@@ -1126,14 +1484,23 @@ namespace Cthangover.Tools.EntityEditor
             SetStatus(string.Format(ToolUi.Tr("tools/entity_editor/deleted"), id));
         }
 
-        private void Undo() => StepHistory(document != null && document.Undo());
+        private void Undo()
+        {
+            StepHistory(document != null && document.Undo());
+        }
 
-        private void Redo() => StepHistory(document != null && document.Redo());
+        private void Redo()
+        {
+            StepHistory(document != null && document.Redo());
+        }
 
         private void StepHistory(bool stepped)
         {
             if (!stepped)
+            {
                 return;
+            }
+
             // The document holds new JSON objects now: find the selection again by id.
             var id = selected?.Id;
             SetDirty();
@@ -1141,23 +1508,28 @@ namespace Cthangover.Tools.EntityEditor
             Select(document.FindAny(id) ?? document.Records.FirstOrDefault());
         }
 
-        /// <summary>"Rename…" of the selected saved entity: the dialog lists the references before anything is written (plan 14.G6).</summary>
+        /// <summary>
+        /// "Rename…" of the selected saved entity: the dialog lists the references before anything is written (plan 14.G6).
+        /// </summary>
         public void Rename()
         {
             if (selected == null || selected.IsForeign || document == null)
+            {
                 return;
+            }
+
             var oldId = selected.Id;
-            var dialog = new EntityRenameDialog(
-                oldId,
-                newId => EntityRename.Problem(kind, newId, id => document.FindAny(id) != null),
-                newId => EntityRename.Plan(kind, modId, oldId, newId),
-                newId => RenameTo(oldId, newId));
+            var request = new EntityRenameRequest(this, oldId);
+            var dialog = new EntityRenameDialog(oldId, CheckRename, request.Plan, request.Apply);
             AddChild(dialog);
             dialog.PopupCentered();
         }
 
-        /// <summary>Applies the rename (the window saves first) and shows the renamed entity; null on success, else the error's locale key.</summary>
-        private string RenameTo(string oldId, string newId)
+        /// <summary>
+        /// Applies the rename (the window saves first) and shows the renamed entity; null on success, else the error's
+        /// locale key.
+        /// </summary>
+        internal string RenameTo(string oldId, string newId)
         {
             var error = rename.Apply(kind, modId, oldId, newId, Save, out var files);
             if (error != null)
@@ -1165,6 +1537,7 @@ namespace Cthangover.Tools.EntityEditor
                 SetStatus(ToolUi.Tr(error), ToolStatusKind.Error);
                 return error;
             }
+
             undoRenameButton.Disabled = false;
             DoOpenMod(modId);
             Select(document.Find(newId));
@@ -1177,15 +1550,24 @@ namespace Cthangover.Tools.EntityEditor
             var files = rename.Undo();
             undoRenameButton.Disabled = true;
             if (files == 0)
+            {
                 return;
+            }
+
             DoOpenMod(modId);
             SetStatus(string.Format(ToolUi.Tr("tools/rename/undone"), files), ToolStatusKind.Ok);
         }
 
         /// <summary>Ctrl+S.</summary>
-        protected override void OnSaveShortcut() => Save();
+        protected override void OnSaveShortcut()
+        {
+            Save();
+        }
 
-        private void OnSavePressed() => Save();
+        private void OnSavePressed()
+        {
+            Save();
+        }
 
         /// <summary>
         /// Writes the changed data and locale files and makes the game re-read
@@ -1195,7 +1577,10 @@ namespace Cthangover.Tools.EntityEditor
         public bool Save()
         {
             if (document == null)
+            {
                 return false;
+            }
+
             var problems = document.Validate();
             if (problems.Count > 0)
             {
@@ -1203,9 +1588,14 @@ namespace Cthangover.Tools.EntityEditor
                 return false;
             }
 
+            if (!ValidateForSave())
+            {
+                return false;
+            }
+
             var changedFiles = document.ChangedFiles();
             var changedTexts = document.ChangedTexts();
-            foreach (var (path, text) in changedFiles)
+            foreach (var(path, text)in changedFiles)
             {
                 if (!ModFileService.WriteText(modId, path, text))
                 {
@@ -1213,43 +1603,66 @@ namespace Cthangover.Tools.EntityEditor
                     return false;
                 }
             }
+
             var patch = document.ChangedPatch();
             if (patch != null)
             {
-                var (patchPath, patchText) = patch.Value;
-                var written = patchText == null ? ModFileService.DeleteFile(modId, patchPath) : ModFileService.WriteText(modId, patchPath, patchText);
+                var(patchPath, patchText) = patch.Value;
+                var written = patchText == null ? ModFileService.DeleteFile(modId, patchPath) : ModFileService.WriteText(modId,
+                     patchPath, patchText);
                 if (!written)
                 {
                     SetStatus(ToolUi.Tr("tools/common/readonly"), ToolStatusKind.Error);
                     return false;
                 }
+
                 changedFiles.Add((patchPath, patchText));
             }
-            foreach (var (language, key, value) in changedTexts)
+
+            foreach (var(language, key, value)in changedTexts)
                 LocaleFileService.Write(modId, language, key, value);
             // A reference to another mod's entity needs that mod in depends (plan 14.G16): the novice does not edit the manifest.
-            // Pictures, scenarios and maps a record names count too (plan 14.G16): the schema describes the first, ExtraReferencesOf the rest.
+            // Pictures, scenarios and maps a record names count too (plan 14.G16): the schema describes the first,
+            // ExtraReferencesOf the rest.
             var fieldsOfKind = Cthangover.Mods.Schemas.SchemaCatalog.Current.FieldsOf(kind).ToList();
-            var added = ModDependencies.EnsureReferenced(modId, document.Records.Where(r => !r.IsForeign)
-                .SelectMany(r => ModDependencies.ReferencesOf(r.Data, fieldsOfKind).Concat(ExtraReferencesOf(r.Data))).ToList());
+            var references = new List<(string Kind, string Id)>();
+            foreach (var record in document.Records)
+            {
+                if (!record.IsForeign)
+                {
+                    references.AddRange(ModDependencies.ReferencesOf(record.Data, fieldsOfKind));
+                    references.AddRange(ExtraReferencesOf(record.Data));
+                }
+            }
 
+            references.AddRange(ExtraDocumentReferences());
+            var added = ModDependencies.EnsureReferenced(modId, references);
             document.MarkSaved();
             MarkClean();
             editing = false;
-            savedIds.UnionWith(document.Records.Select(r => r.Id));
+            savedIds.UnionWith(document.Records.Select(RecordId));
             ModManager.Instance.GetResolver<PatchResolver>()?.ClearCache();
             ModManager.Instance.GetResolver<EntityResolver>()?.ClearCache();
             ModManager.Instance.GetResolver<FileListResolver>()?.ClearCache();
             icons.Clear();
             if (changedTexts.Count > 0)
+            {
                 LocaleFileService.ReloadGame();
+            }
+
             // Open windows that list this kind (the map editor's Characters tab) read the new caches at once (plan 14.G17).
-            ModEventBus.Publish(new EntitiesSavedEvent { Kind = kind, ModId = modId });
+            ModEventBus.Publish(new EntitiesSavedEvent { 
+                Kind = kind, 
+                ModId = modId 
+            });
             GameLogger.Log("TOOLS", $"entity editor: saved {changedFiles.Count} {kind} file(s), {changedTexts.Count} text(s) of '{modId}'");
             var savedText = string.Format(ToolUi.Tr("tools/entity_editor/saved"), changedFiles.Count, changedTexts.Count, modId);
             SetStatus(added.Count == 0 ? savedText : savedText + " " + ModDependencies.Notice(added), ToolStatusKind.Ok);
             if (selected != null)
+            {
                 Select(selected);
+            }
+
             return true;
         }
 
@@ -1257,7 +1670,10 @@ namespace Cthangover.Tools.EntityEditor
         protected override bool HandleKey(InputEventKey key)
         {
             if (!key.CtrlPressed)
+            {
                 return false;
+            }
+
             switch (key.Keycode)
             {
                 case Key.Z when key.ShiftPressed:
@@ -1274,9 +1690,193 @@ namespace Cthangover.Tools.EntityEditor
                     DuplicateSelected();
                     return true;
             }
+
             return false;
         }
 
-        private static string Str(JsonObject data, string key) => data[key]?.ToString();
+        private EntityField FirstField(EntityFieldKind value)
+        {
+            foreach (var field in fields)
+            {
+                if (field.Kind == value)
+                {
+                    return field;
+                }
+            }
+
+            return null;
+        }
+
+        private bool HasTopField(string key)
+        {
+            foreach (var field in fields)
+            {
+                if (string.Equals(EntityPath.Top(field.Key), key, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool HasFormKey(string key)
+        {
+            foreach (var field in fields)
+            {
+                if (string.Equals(field.Key, key, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            foreach (var editor in schemaEditors)
+            {
+                if (string.Equals(editor.Field.Key, key, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static KeyValuePair<string, JsonNode> FieldValue(JsonObject data, string key)
+        {
+            foreach (var pair in data)
+            {
+                if (string.Equals(pair.Key, key, StringComparison.OrdinalIgnoreCase))
+                {
+                    return pair;
+                }
+            }
+
+            return default;
+        }
+
+        private static string[] ArrayTexts(JsonArray array)
+        {
+            if (array == null)
+            {
+                return Array.Empty<string>();
+            }
+
+            var values = new List<string>();
+            foreach (var node in array)
+            {
+                var value = node?.ToString();
+                if (value != null)
+                {
+                    values.Add(value);
+                }
+            }
+
+            return values.ToArray();
+        }
+
+        private static JsonArray StringsNode(List<string> values)
+        {
+            var nodes = new JsonArray();
+            foreach (var value in values)
+            {
+                nodes.Add(value);
+            }
+
+            return nodes;
+        }
+
+        private static bool IsLocaleField(EntityField field)
+        {
+            return field.Kind == EntityFieldKind.LocaleText;
+        }
+
+        private static bool HasLock(EntityField field)
+        {
+            return field.Locked != null;
+        }
+
+        private static bool HasCondition(EntityField field)
+        {
+            return field.When != null;
+        }
+
+        private static bool HasTextPattern(EntityField field)
+        {
+            return IsLocaleField(field) && field.KeyPattern != null;
+        }
+
+        private static bool IsNestedField(EntityField field)
+        {
+            return EntityPath.IsNested(field.Key);
+        }
+
+        private static bool IsChecked(CheckBox value)
+        {
+            return value.ButtonPressed;
+        }
+
+        private static string CheckText(CheckBox value)
+        {
+            return value.Text;
+        }
+
+        private static string RecordId(EntityRecord record)
+        {
+            return record.Id;
+        }
+
+        private static string PairKey(KeyValuePair<string, JsonNode> pair)
+        {
+            return pair.Key;
+        }
+
+        private bool IsOtherPair(KeyValuePair<string, JsonNode> pair)
+        {
+            return !IsFormKey(pair.Key);
+        }
+
+        private bool IsOtherKey(string key)
+        {
+            return !IsFormKey(key);
+        }
+
+        private void RestoreModPicker()
+        {
+            modPicker.Select(mods.IndexOf(modId));
+        }
+
+        internal void OpenRequestedMod(string mod, bool create)
+        {
+            DoOpenMod(mod);
+            if (create)
+            {
+                AddNew();
+            }
+        }
+
+        internal void SetPickedPicture(EntityField field, string id)
+        {
+            ((LineEdit)controls[field]).Text = id;
+        }
+
+        private bool HasEntity(string id)
+        {
+            return document.FindAny(id) != null;
+        }
+
+        private string CheckRename(string newId)
+        {
+            return EntityRename.Problem(kind, newId, HasEntity);
+        }
+
+        internal ReferencePlan RenamePlan(string oldId, string newId)
+        {
+            return EntityRename.Plan(kind, modId, oldId, newId);
+        }
+
+        private static string Str(JsonObject data, string key)
+        {
+            return data[key]?.ToString();
+        }
     }
 }
