@@ -155,6 +155,15 @@ namespace Cthangover.Tools.EntityEditor
             return Enumerable.Empty<(string Kind, string Id)>();
         }
 
+        /// <summary>
+        /// Runtime modules required by this document kind independently of particular entity references.
+        /// Saved through the same dependency/cycle rules after successful data writes.
+        /// </summary>
+        protected virtual IEnumerable<string> ExtraDocumentProviders()
+        {
+            return Enumerable.Empty<string>();
+        }
+
         /// <summary>Called after the form shows an entity (null: none is selected) and after each edit of it.</summary>
         protected virtual void OnSelectionChanged(EntityRecord record)
         {
@@ -1637,6 +1646,7 @@ namespace Cthangover.Tools.EntityEditor
 
             references.AddRange(ExtraDocumentReferences());
             var added = ModDependencies.EnsureReferenced(modId, references);
+            added.AddRange(ModDependencies.EnsureProviders(modId, ExtraDocumentProviders()));
             document.MarkSaved();
             MarkClean();
             editing = false;
