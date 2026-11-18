@@ -22,7 +22,8 @@ namespace Cthangover.Tools.Schemas
         public SchemaFieldDefinition Field => control.Field;
 
         /// <inheritdoc />
-        public void Load(JsonNode node) => control.Value = SchemaJsonValues.ToText(node);
+        public void Load(JsonNode node) => control.Value = string.Equals(Field.Type,"json",StringComparison.OrdinalIgnoreCase)
+            ? node?.ToJsonString() ?? string.Empty : SchemaJsonValues.ToText(node);
 
         /// <inheritdoc />
         public JsonNode Save() => SchemaJsonValues.ToNode(control.Field, control.Value);
